@@ -18,17 +18,19 @@ function AppContent() {
 
   if (!user) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50">
-        <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl text-center space-y-6">
-          <div className="mx-auto w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-6 shadow-inner">
-            <Stethoscope className="w-8 h-8" />
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50/50">
+        <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-xl shadow-gray-200/50 text-center space-y-6 border border-gray-100 animate-in fade-in zoom-in-95 duration-500">
+          <div className="mx-auto w-20 h-20 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6 ring-8 ring-blue-50/50">
+            <Stethoscope className="w-10 h-10" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">MedTracker PWA</h1>
-          <p className="text-gray-500">
-            Une application web pour remplir et exporter vos fiches de suivi médical facilement.
-          </p>
-          <div className="pt-4">
-            <Button size="lg" className="w-full" onClick={signInWithGoogle}>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">MedTracker</h1>
+            <p className="text-gray-500 leading-relaxed text-sm px-2">
+              Une plateforme moderne et sécurisée pour gérer, structurer et exporter vos dossiers de suivi médical en toute simplicité.
+            </p>
+          </div>
+          <div className="pt-6">
+            <Button size="lg" className="w-full h-12 text-md shadow-md hover:shadow-lg transition-all" onClick={signInWithGoogle}>
               Se connecter avec Google
             </Button>
           </div>

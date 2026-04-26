@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertCircle, FileText, Activity, Stethoscope, UserIcon, CheckCircle2 } from 'lucide-react';
+
 interface RecordFormProps {
   initialValues?: Partial<MedicalRecordFormValues>;
   onSubmit: (data: MedicalRecordFormValues) => void;
@@ -17,7 +20,7 @@ interface RecordFormProps {
 
 export function RecordForm({ initialValues, onSubmit, isSubmitting }: RecordFormProps) {
   const { register, control, handleSubmit, watch, formState: { errors } } = useForm<MedicalRecordFormValues>({
-    resolver: zodResolver(medicalRecordSchema),
+    resolver: zodResolver(medicalRecordSchema as any),
     defaultValues: {
       numeroDossier: '',
       nom: '',
@@ -77,6 +80,54 @@ export function RecordForm({ initialValues, onSubmit, isSubmitting }: RecordForm
     { value: 'NP', label: 'Non Précisé' }
   ];
 
+  const cdtOptions = [
+    { value: 'Papillaire', label: 'Papillaire' },
+    { value: 'Vésiculaire', label: 'Vésiculaire' },
+    { value: 'Oncocytaire', label: 'Oncocytaire' },
+    { value: 'NIFTP', label: 'NIFTP' },
+    { value: 'Autre', label: 'Autre' },
+    { value: 'NP', label: 'Non Précisé' },
+  ];
+
+  const varianteOptions = [
+    { value: 'Classique', label: 'Classique' },
+    { value: 'Folliculaire', label: 'Folliculaire' },
+    { value: 'Solide', label: 'Solide' },
+    { value: 'A cellules hautes', label: 'À cellules hautes' },
+    { value: 'Sclérosante diffuse', label: 'Sclérosante diffuse' },
+    { value: 'Autre', label: 'Autre' },
+    { value: 'NP', label: 'Non Précisé' },
+  ];
+
+  const rOptions = [
+    { value: 'R0', label: 'R0' },
+    { value: 'R1', label: 'R1' },
+    { value: 'R2', label: 'R2' },
+    { value: 'Rx', label: 'Rx' },
+    { value: 'NP', label: 'NP' },
+  ];
+
+  const tOptions = [
+    { value: 'T1', label: 'T1' }, { value: 'T1a', label: 'T1a' }, { value: 'T1b', label: 'T1b' },
+    { value: 'T2', label: 'T2' },
+    { value: 'T3', label: 'T3' }, { value: 'T3a', label: 'T3a' }, { value: 'T3b', label: 'T3b' },
+    { value: 'T4', label: 'T4' }, { value: 'T4a', label: 'T4a' }, { value: 'T4b', label: 'T4b' },
+    { value: 'Tx', label: 'Tx' }, { value: 'NP', label: 'NP' }
+  ];
+
+  const nOptions = [
+    { value: 'N0', label: 'N0' },
+    { value: 'N1', label: 'N1' }, { value: 'N1a', label: 'N1a' }, { value: 'N1b', label: 'N1b' },
+    { value: 'Nx', label: 'Nx' }, { value: 'NP', label: 'NP' },
+  ];
+
+  const mOptions = [
+    { value: 'M0', label: 'M0' },
+    { value: 'M1', label: 'M1' },
+    { value: 'Mx', label: 'Mx' },
+    { value: 'NP', label: 'NP' },
+  ];
+
   const renderSelect = (name: keyof MedicalRecordFormValues, label: string, options: {value: string, label: string}[]) => (
     <div className="space-y-1.5">
       <Label htmlFor={name}>{label}</Label>
@@ -84,189 +135,244 @@ export function RecordForm({ initialValues, onSubmit, isSubmitting }: RecordForm
         name={name}
         control={control}
         render={({ field }) => (
-          <Select onValueChange={field.onChange} defaultValue={field.value as string}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionner..." />
-            </SelectTrigger>
-            <SelectContent>
-              {options.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div>
+            <Select onValueChange={field.onChange} defaultValue={field.value as string}>
+              <SelectTrigger className={errors[name] ? 'border-red-500 ring-red-500' : ''}>
+                <SelectValue placeholder="Sélectionner..." />
+              </SelectTrigger>
+              <SelectContent>
+                {options.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors[name] && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors[name]?.message as string}</p>}
+          </div>
         )}
       />
     </div>
   );
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 pb-12">
-      <Card>
-        <CardHeader>
-          <CardTitle>Identification</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="numeroDossier">Numéro du dossier</Label>
-            <Input id="numeroDossier" {...register('numeroDossier')} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="nom">Nom</Label>
-            <Input id="nom" {...register('nom')} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="prenoms">Prénoms</Label>
-            <Input id="prenoms" {...register('prenoms')} />
-          </div>
-          {renderSelect('sexe', 'Sexe', [
-            { value: 'M', label: 'M' },
-            { value: 'F', label: 'F' },
-            { value: 'NP', label: 'Non Précisé' },
-          ])}
-          <div className="space-y-1.5">
-            <Label htmlFor="ddn">Date de Naissance (DDN)</Label>
-            <Input id="ddn" type="date" {...register('ddn')} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="adresse">Adresse</Label>
-            <Input id="adresse" {...register('adresse')} />
-          </div>
-        </CardContent>
-      </Card>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-20 relative">
+      <Tabs defaultValue="identification" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto p-1 mb-6 bg-gray-100/50 backdrop-blur-sm rounded-xl">
+          <TabsTrigger value="identification" className="py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all">
+            <UserIcon className="w-4 h-4" /> <span className="hidden sm:inline">Identification</span>
+          </TabsTrigger>
+          <TabsTrigger value="antecedents" className="py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all">
+            <FileText className="w-4 h-4" /> <span className="hidden sm:inline">Antécédents</span>
+          </TabsTrigger>
+          <TabsTrigger value="tumeur" className="py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all">
+            <Activity className="w-4 h-4" /> <span className="hidden sm:inline">Tumeur</span>
+          </TabsTrigger>
+          <TabsTrigger value="traitement" className="py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all">
+            <Stethoscope className="w-4 h-4" /> <span className="hidden sm:inline">Suivi</span>
+          </TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Antécédents & Diagnostic</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {renderSelect('atcdFamCdt', 'ATCD Fam CDT', ynnpOptions)}
-          {renderSelect('atcdFamCancer', 'ATCD Fam Cancer', ynnpOptions)}
-          {renderSelect('atcdPersCancer', 'ATCD Pers Cancer', ynnpOptions)}
-          <div className="space-y-1.5">
-            <Label htmlFor="ageDgc">Age du Dgc</Label>
-            <Input id="ageDgc" type="number" {...register('ageDgc', { valueAsNumber: true })} />
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="identification" className="focus-visible:outline-none focus-visible:ring-0">
+          <Card className="border-0 shadow-sm ring-1 ring-gray-900/5">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl">Identification du patient</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+              <div className="space-y-1.5 flex flex-col">
+                <Label htmlFor="numeroDossier" className="text-gray-700">Numéro du dossier</Label>
+                <Input id="numeroDossier" placeholder="ex: 123/24" className={errors.numeroDossier ? 'border-red-500' : 'bg-gray-50/50'} {...register('numeroDossier')} />
+                {errors.numeroDossier && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.numeroDossier.message}</p>}
+              </div>
+              <div className="space-y-1.5 flex flex-col">
+                <Label htmlFor="nom" className="text-gray-700">Nom</Label>
+                <Input id="nom" placeholder="Saisir le nom" className={errors.nom ? 'border-red-500' : 'bg-gray-50/50'} {...register('nom')} />
+                {errors.nom && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.nom.message}</p>}
+              </div>
+              <div className="space-y-1.5 flex flex-col">
+                <Label htmlFor="prenoms" className="text-gray-700">Prénoms</Label>
+                <Input id="prenoms" placeholder="Saisir les prénoms" className={errors.prenoms ? 'border-red-500' : 'bg-gray-50/50'} {...register('prenoms')} />
+                {errors.prenoms && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.prenoms.message}</p>}
+              </div>
+              {renderSelect('sexe', 'Sexe', [
+                { value: 'M', label: 'Masculin' },
+                { value: 'F', label: 'Féminin' },
+                { value: 'NP', label: 'Non Précisé' },
+              ])}
+              <div className="space-y-1.5 flex flex-col">
+                <Label htmlFor="ddn" className="text-gray-700">Date de Naissance</Label>
+                <Input id="ddn" type="date" className="bg-gray-50/50" {...register('ddn')} />
+              </div>
+              <div className="space-y-1.5 flex flex-col md:col-span-2">
+                <Label htmlFor="adresse" className="text-gray-700">Adresse</Label>
+                <Input id="adresse" placeholder="Adresse complète" className="bg-gray-50/50" {...register('adresse')} />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Tumeur (Caractéristiques)</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="cdt">CDT</Label>
-            <Input id="cdt" {...register('cdt')} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="variante">Variante</Label>
-            <Input id="variante" {...register('variante')} />
-          </div>
-          {renderSelect('sizeSup2cm', 'Taille (∑ ≤ 2 Ou > 2 cm)', [
-            { value: '<= 2', label: '≤ 2 cm' },
-            { value: '> 2', label: '> 2 cm' },
-            { value: 'NP', label: 'Non Précisé' },
-          ])}
-          {renderSelect('ec', 'EC', ynnpOptions)}
-          {renderSelect('macroMicro', 'Macro ou micro', [
-            { value: 'M', label: 'Macro' },
-            { value: 'm', label: 'micro' },
-            { value: 'NP', label: 'Non Précisé' },
-          ])}
-          {renderSelect('ev', 'EV (< 4 Ou ≥ 4)', [
-            { value: '< 4', label: '< 4' },
-            { value: '>= 4', label: '≥ 4' },
-            { value: 'NP', label: 'Non Précisé' },
-          ])}
-          {renderSelect('mitoses', 'Mitoses (< 3 ou ≥ 3)', [
-            { value: '< 3', label: '< 3' },
-            { value: '>= 3', label: '≥ 3' },
-            { value: 'NP', label: 'Non Précisé' },
-          ])}
-          {renderSelect('hgie', 'Hgie (Hémorragie)', ynnpOptions)}
-          {renderSelect('nse', 'Nse (Nécrose)', ynnpOptions)}
-          {renderSelect('filetNerv', 'Filet Nerv', ynnpOptions)}
-          <div className="space-y-1.5">
-            <Label htmlFor="r">R</Label>
-            <Input id="r" {...register('r')} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="t">T</Label>
-            <Input id="t" {...register('t')} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="n">N</Label>
-            <Input id="n" {...register('n')} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="m">M</Label>
-            <Input id="m" {...register('m')} />
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="antecedents" className="focus-visible:outline-none focus-visible:ring-0">
+          <Card className="border-0 shadow-sm ring-1 ring-gray-900/5">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl">Antécédents & Diagnostic</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-5">
+              {renderSelect('atcdFamCdt', 'ATCD Fam CDT', ynnpOptions)}
+              {renderSelect('atcdFamCancer', 'ATCD Fam Cancer', ynnpOptions)}
+              {renderSelect('atcdPersCancer', 'ATCD Pers Cancer', ynnpOptions)}
+              <div className="space-y-1.5 flex flex-col">
+                <Label htmlFor="ageDgc" className="text-gray-700">Age du Dgc (années)</Label>
+                <Input id="ageDgc" type="number" min="0" placeholder="0" className="bg-gray-50/50" {...register('ageDgc', { valueAsNumber: true })} />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Traitement et Suivi</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {renderSelect('chir', 'Chirurgie', [
-            { value: 'TT', label: 'TT' },
-            { value: 'TST', label: 'TST' },
-            { value: 'TP', label: 'TP' },
-            { value: 'NP', label: 'Non Précisé' },
-          ])}
-          <div className="space-y-1.5">
-            <Label htmlFor="cg">CG</Label>
-            <Input id="cg" {...register('cg')} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="tps">tps</Label>
-            <Input id="tps" {...register('tps')} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="dgcI1">Dgc à I1 (mois)</Label>
-            <Input id="dgcI1" type="number" {...register('dgcI1', { valueAsNumber: true })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="chirI1">Chir à I1 (mois)</Label>
-            <Input id="chirI1" type="number" {...register('chirI1', { valueAsNumber: true })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="nbreCures">Nbre de cures</Label>
-            <Input id="nbreCures" type="number" {...register('nbreCures', { valueAsNumber: true })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="actCum">Act Cum (mCi)</Label>
-            <Input id="actCum" type="number" {...register('actCum', { valueAsNumber: true })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="suivi">Suivi (années)</Label>
-            <Input id="suivi" type="number" {...register('suivi', { valueAsNumber: true })} />
-          </div>
-          
-          {renderSelect('rep2ans', 'Rép à 2 ans', repOptions)}
-          {renderSelect('rep5ans', 'Rép à 5 ans', repOptions)}
-          {renderSelect('rep10ans', 'Rép à 10 ans', repOptions)}
-          
-          {renderSelect('dcd', 'DCD', ynnpOptions)}
-          
-          {dcdWatcher === 'O' && (
-            <div className="space-y-1.5 border-l-2 border-blue-500 pl-3">
-              <Label htmlFor="dcdAge">Si oui, âge du décès</Label>
-              <Input id="dcdAge" type="number" {...register('dcdAge', { valueAsNumber: true })} />
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        <TabsContent value="tumeur" className="focus-visible:outline-none focus-visible:ring-0">
+          <Card className="border-0 shadow-sm ring-1 ring-gray-900/5">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl">Opération & Caractéristiques Tumorales</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
+              <div className="col-span-1 sm:col-span-2 space-y-4">
+                <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 border-b pb-2">Histologie</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {renderSelect('cdt', 'CDT', cdtOptions)}
+                  {renderSelect('variante', 'Variante', varianteOptions)}
+                </div>
+              </div>
+              
+              <div className="col-span-1 lg:col-span-2 space-y-4">
+                <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 border-b pb-2">TNM</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {renderSelect('r', 'Resection (R)', rOptions)}
+                  {renderSelect('t', 'Tumor (T)', tOptions)}
+                  {renderSelect('n', 'Node (N)', nOptions)}
+                  {renderSelect('m', 'Metastasis (M)', mOptions)}
+                </div>
+              </div>
 
-      <div className="flex justify-end gap-4 sticky bottom-4 p-4 bg-white/80 backdrop-blur-md border rounded-lg shadow-sm">
-        <Button type="button" variant="outline" onClick={() => window.history.back()}>
-          Annuler
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
-        </Button>
+              <div className="col-span-1 sm:col-span-2 lg:col-span-4 space-y-4 pt-4">
+                <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 border-b pb-2">Caractéristiques Détaillées</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {renderSelect('sizeSup2cm', 'Taille de la tumeur', [
+                    { value: '<= 2', label: '∑ ≤ 2 cm' },
+                    { value: '> 2', label: '∑ > 2 cm' },
+                    { value: 'NP', label: 'Non Précisé' },
+                  ])}
+                  {renderSelect('ec', 'Extension Capsulaire (EC)', ynnpOptions)}
+                  {renderSelect('macroMicro', 'Invasion', [
+                    { value: 'M', label: 'Macroscopique' },
+                    { value: 'm', label: 'microscopique' },
+                    { value: 'NP', label: 'Non Précisé' },
+                  ])}
+                  {renderSelect('ev', 'Emboles Vasculaires (EV)', [
+                    { value: '< 4', label: '< 4' },
+                    { value: '>= 4', label: '≥ 4' },
+                    { value: 'NP', label: 'Non Précisé' },
+                  ])}
+                  {renderSelect('mitoses', 'Mitoses', [
+                    { value: '< 3', label: '< 3' },
+                    { value: '>= 3', label: '≥ 3' },
+                    { value: 'NP', label: 'Non Précisé' },
+                  ])}
+                  {renderSelect('hgie', 'Hémorragie (Hgie)', ynnpOptions)}
+                  {renderSelect('nse', 'Nécrose (Nse)', ynnpOptions)}
+                  {renderSelect('filetNerv', 'Filet Nerveux', ynnpOptions)}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="traitement" className="focus-visible:outline-none focus-visible:ring-0">
+          <Card className="border-0 shadow-sm ring-1 ring-gray-900/5">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl">Traitement & Suivi Évolutif</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
+              <div className="col-span-1 lg:col-span-3 space-y-4">
+                <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider border-b pb-2">Traitement Initial</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {renderSelect('chir', 'Chirurgie', [
+                    { value: 'TT', label: 'Thyroïdectomie Totale (TT)' },
+                    { value: 'TST', label: 'Thyroïdectomie SubTotale (TST)' },
+                    { value: 'TP', label: 'Thyroïdectomie Partielle (TP)' },
+                    { value: 'NP', label: 'Non Précisé' },
+                  ])}
+                  <div className="space-y-1.5 flex flex-col">
+                    <Label htmlFor="cg" className="text-gray-700">Curage Ganglionnaire (CG)</Label>
+                    <Input id="cg" placeholder="ex: Central, Latéral" className="bg-gray-50/50" {...register('cg')} />
+                  </div>
+                  <div className="space-y-1.5 flex flex-col">
+                    <Label htmlFor="tps" className="text-gray-700">Temps (tps)</Label>
+                    <Input id="tps" className="bg-gray-50/50" {...register('tps')} />
+                  </div>
+                  <div className="space-y-1.5 flex flex-col">
+                    <Label htmlFor="dgcI1" className="text-gray-700">Délai Dgc à Iode 131 (mois)</Label>
+                    <Input id="dgcI1" type="number" min="0" className="bg-gray-50/50" {...register('dgcI1', { valueAsNumber: true })} />
+                  </div>
+                  <div className="space-y-1.5 flex flex-col">
+                    <Label htmlFor="chirI1" className="text-gray-700">Délai Chir à Iode 131 (mois)</Label>
+                    <Input id="chirI1" type="number" min="0" className="bg-gray-50/50" {...register('chirI1', { valueAsNumber: true })} />
+                  </div>
+                  <div className="space-y-1.5 flex flex-col">
+                    <Label htmlFor="actCum" className="text-gray-700">Activité Cumulée (mCi)</Label>
+                    <Input id="actCum" type="number" min="0" className="bg-gray-50/50" {...register('actCum', { valueAsNumber: true })} />
+                  </div>
+                  <div className="space-y-1.5 flex flex-col">
+                    <Label htmlFor="nbreCures" className="text-gray-700">Nbre de cures</Label>
+                    <Input id="nbreCures" type="number" min="0" className="bg-gray-50/50" {...register('nbreCures', { valueAsNumber: true })} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-span-1 lg:col-span-3 space-y-4 pt-4">
+                <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider border-b pb-2">Suivi</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-1.5 flex flex-col">
+                    <Label htmlFor="suivi" className="text-gray-700">Durée du suivi (années)</Label>
+                    <Input id="suivi" type="number" min="0" className="bg-gray-50/50" {...register('suivi', { valueAsNumber: true })} />
+                  </div>
+                  {renderSelect('rep2ans', 'Réponse à 2 ans', repOptions)}
+                  {renderSelect('rep5ans', 'Réponse à 5 ans', repOptions)}
+                  {renderSelect('rep10ans', 'Réponse à 10 ans', repOptions)}
+                </div>
+              </div>
+
+              <div className="col-span-1 lg:col-span-3 space-y-4 pt-4">
+                <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider border-b pb-2">Statut Vital</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {renderSelect('dcd', 'Décédé (DCD)', ynnpOptions)}
+                  
+                  {dcdWatcher === 'O' && (
+                    <div className="space-y-1.5 flex flex-col p-4 bg-red-50/50 rounded-lg border border-red-100">
+                      <Label htmlFor="dcdAge" className="text-red-800">Âge du décès</Label>
+                      <Input id="dcdAge" type="number" min="0" className="bg-white border-red-200 focus-visible:ring-red-500" {...register('dcdAge', { valueAsNumber: true })} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Floating Action Bar */}
+      <div className="fixed sm:sticky bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] z-10 flex justify-between items-center px-4 rounded-t-2xl sm:rounded-none sm:bottom-4 sm:rounded-xl sm:border">
+        <div className="hidden sm:block">
+          <p className="text-sm text-gray-500 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500"/> Remplissage en cours...</p>
+        </div>
+        <div className="flex gap-3 w-full sm:w-auto">
+          <Button type="button" variant="outline" className="flex-1 sm:flex-none border-gray-200 hover:bg-gray-50 text-gray-600" onClick={() => window.history.back()}>
+            Annuler
+          </Button>
+          <Button type="submit" className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <span className="flex items-center gap-2">
+                <Activity className="w-4 h-4 animate-spin"/> Sauvegarde...
+              </span>
+            ) : 'Enregistrer le dossier'}
+          </Button>
+        </div>
       </div>
     </form>
   );
