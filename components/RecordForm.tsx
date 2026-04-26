@@ -15,10 +15,11 @@ import { AlertCircle, FileText, Activity, Stethoscope, UserIcon, CheckCircle2 } 
 interface RecordFormProps {
   initialValues?: Partial<MedicalRecordFormValues>;
   onSubmit: (data: MedicalRecordFormValues) => void;
+  onCancel?: () => void;
   isSubmitting?: boolean;
 }
 
-export function RecordForm({ initialValues, onSubmit, isSubmitting }: RecordFormProps) {
+export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: RecordFormProps) {
   const { register, control, handleSubmit, watch, formState: { errors } } = useForm<MedicalRecordFormValues>({
     resolver: zodResolver(medicalRecordSchema as any),
     defaultValues: {
@@ -153,8 +154,12 @@ export function RecordForm({ initialValues, onSubmit, isSubmitting }: RecordForm
     </div>
   );
 
+  const onSubmitCallback = (data: MedicalRecordFormValues) => {
+    onSubmit(data);
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-20 relative">
+    <form onSubmit={handleSubmit(onSubmitCallback)} className="space-y-6 pb-20 relative">
       <Tabs defaultValue="identification" className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto p-1 mb-6 bg-gray-100/50 backdrop-blur-sm rounded-xl">
           <TabsTrigger value="identification" className="py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all">
@@ -179,7 +184,26 @@ export function RecordForm({ initialValues, onSubmit, isSubmitting }: RecordForm
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
               <div className="space-y-1.5 flex flex-col">
                 <Label htmlFor="numeroDossier" className="text-gray-700">Numéro du dossier</Label>
-                <Input id="numeroDossier" placeholder="ex: 123/24" className={errors.numeroDossier ? 'border-red-500' : 'bg-gray-50/50'} {...register('numeroDossier')} />
+                <Controller 
+                  name="numeroDossier" 
+                  control={control}
+                  render={({ field }) => (
+                    <Input 
+                      id="numeroDossier" 
+                      placeholder="ex: 123/24" 
+                      className={errors.numeroDossier ? 'border-red-500' : 'bg-gray-50/50'} 
+                      {...field}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+                        if (val.length > 3) {
+                          val = val.substring(0, 3) + '/' + val.substring(3, 5);
+                        }
+                        field.onChange(val);
+                      }}
+                      maxLength={6}
+                    />
+                  )}
+                />
                 {errors.numeroDossier && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.numeroDossier.message}</p>}
               </div>
               <div className="space-y-1.5 flex flex-col">
@@ -362,7 +386,7 @@ export function RecordForm({ initialValues, onSubmit, isSubmitting }: RecordForm
           <p className="text-sm text-gray-500 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500"/> Remplissage en cours...</p>
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
-          <Button type="button" variant="outline" className="flex-1 sm:flex-none border-gray-200 hover:bg-gray-50 text-gray-600" onClick={() => window.history.back()}>
+          <Button type="button" variant="outline" className="flex-1 sm:flex-none border-gray-200 hover:bg-gray-50 text-gray-600" onClick={onCancel || (() => window.history.back())}>
             Annuler
           </Button>
           <Button type="submit" className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20" disabled={isSubmitting}>
