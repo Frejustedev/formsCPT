@@ -1,0 +1,80 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidMedicalRecord(data) {
+      return data.keys().hasAll(['userId', 'createdAt', 'updatedAt'])
+        && data.userId is string && data.userId.size() <= 128
+        && data.userId == request.auth.uid
+        && data.createdAt is number
+        && data.updatedAt is number
+        // Check string fields with sizes to avoid payload bloat
+        && data.get('numeroDossier', '') is string && data.get('numeroDossier', '').size() <= 200
+        && data.get('nom', '') is string && data.get('nom', '').size() <= 200
+        && data.get('prenoms', '') is string && data.get('prenoms', '').size() <= 200
+        && data.get('sexe', '') is string && data.get('sexe', '').size() <= 10
+        && data.get('ddn', '') is string && data.get('ddn', '').size() <= 100
+        && data.get('adresse', '') is string && data.get('adresse', '').size() <= 500
+        && data.get('atcdFamCdt', '') is string && data.get('atcdFamCancer', '') is string && data.get('atcdPersCancer', '') is string
+        && data.get('cdt', '') is string && data.get('variante', '') is string && data.get('sizeSup2cm', '') is string
+        && data.get('ec', '') is string && data.get('macroMicro', '') is string && data.get('ev', '') is string
+        && data.get('mitoses', '') is string && data.get('hgie', '') is string && data.get('nse', '') is string
+        && data.get('filetNerv', '') is string && data.get('r', '') is string && data.get('t', '') is string
+        && data.get('n', '') is string && data.get('m', '') is string && data.get('chir', '') is string
+        && data.get('cg', '') is string && data.get('tps', '') is string && data.get('rep2ans', '') is string
+        && data.get('rep5ans', '') is string && data.get('rep10ans', '') is string && data.get('dcd', '') is string
+        // Check number fields
+        && (data.get('ageDgc', 0) is number)
+        && (data.get('dgcI1', 0) is number)
+        && (data.get('chirI1', 0) is number)
+        && (data.get('nbreCures', 0) is number)
+        && (data.get('actCum', 0) is number)
+        && (data.get('suivi', 0) is number)
+        && (data.get('dcdAge', 0) is number)
+    }
+
+    match /records/{recordId} {
+      allow read: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn()
+        && isValidId(recordId)
+        && isValidMedicalRecord(incoming());
+
+      allow update: if isSignedIn()
+        && isValidMedicalRecord(incoming())
+        && existing().userId == request.auth.uid
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+            'updatedAt', 'numeroDossier', 'nom', 'prenoms', 'sexe', 'ddn', 'adresse',
+            'atcdFamCdt', 'atcdFamCancer', 'atcdPersCancer', 'ageDgc', 'cdt', 'variante',
+            'sizeSup2cm', 'ec', 'macroMicro', 'ev', 'mitoses', 'hgie', 'nse', 'filetNerv',
+            'r', 't', 'n', 'm', 'chir', 'cg', 'tps', 'dgcI1', 'chirI1', 'nbreCures',
+            'actCum', 'suivi', 'rep2ans', 'rep5ans', 'rep10ans', 'dcd', 'dcdAge'
+        ]);
+
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+  }
+}

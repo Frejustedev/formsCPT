@@ -1,0 +1,6 @@
+{
+  "name": "Medical Form Tracker PWA",
+  "description": "A PWA to easily fill out medical forms with Firebase integration, exporting to the requested table format.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

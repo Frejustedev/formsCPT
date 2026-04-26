@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "medicalRecord": {
+      "title": "Medical Record",
+      "description": "Patient medical record with properties from the provided table form",
+      "type": "object",
+      "properties": {
+        "numeroDossier": { "type": "string" },
+        "nom": { "type": "string" },
+        "prenoms": { "type": "string" },
+        "sexe": { "type": "string", "enum": ["M", "F", "NP"] },
+        "ddn": { "type": "string" },
+        "adresse": { "type": "string" },
+        "atcdFamCdt": { "type": "string", "enum": ["O", "N", "NP"] },
+        "atcdFamCancer": { "type": "string", "enum": ["O", "N", "NP"] },
+        "atcdPersCancer": { "type": "string", "enum": ["O", "N", "NP"] },
+        "ageDgc": { "type": "number" },
+        "cdt": { "type": "string" },
+        "variante": { "type": "string" },
+        "sizeSup2cm": { "type": "string", "enum": ["<= 2", "> 2", "NP"] },
+        "ec": { "type": "string", "enum": ["O", "N", "NP"] },
+        "macroMicro": { "type": "string", "enum": ["M", "m", "NP"] },
+        "ev": { "type": "string", "enum": ["< 4", ">= 4", "NP"] },
+        "mitoses": { "type": "string", "enum": ["< 3", ">= 3", "NP"] },
+        "hgie": { "type": "string", "enum": ["O", "N", "NP"] },
+        "nse": { "type": "string", "enum": ["O", "N", "NP"] },
+        "filetNerv": { "type": "string", "enum": ["O", "N", "NP"] },
+        "r": { "type": "string" },
+        "t": { "type": "string" },
+        "n": { "type": "string" },
+        "m": { "type": "string" },
+        "chir": { "type": "string", "enum": ["TT", "TST", "TP", "NP"] },
+        "cg": { "type": "string" },
+        "tps": { "type": "string" },
+        "dgcI1": { "type": "number" },
+        "chirI1": { "type": "number" },
+        "nbreCures": { "type": "number" },
+        "actCum": { "type": "number" },
+        "suivi": { "type": "number" },
+        "rep2ans": { "type": "string", "enum": ["RC", "Récidive", "RP", "RS", "PD", "NP"] },
+        "rep5ans": { "type": "string", "enum": ["RC", "Récidive", "RP", "RS", "PD", "NP"] },
+        "rep10ans": { "type": "string", "enum": ["RC", "Récidive", "RP", "RS", "PD", "NP"] },
+        "dcd": { "type": "string", "enum": ["O", "N", "NP"] },
+        "dcdAge": { "type": "number" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["userId", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "records/{recordId}": {
+      "schema": { "$ref": "#/entities/medicalRecord" },
+      "description": "Store all medical form submissions."
+    }
+  }
+}
