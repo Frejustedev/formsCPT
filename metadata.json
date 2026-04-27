@@ -1,6 +1,6 @@
 {
-  "name": "Medical Form Tracker PWA",
-  "description": "A PWA to easily fill out medical forms with Firebase integration, exporting to the requested table format.",
+  "name": "FORMULAIRE CDT",
+  "description": "Formulaire médical pour le suivi du cancer de la thyroïde avec intégration Firebase et export PDF/Excel.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

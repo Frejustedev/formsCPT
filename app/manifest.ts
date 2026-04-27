@@ -2,9 +2,9 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Medical Form Tracker',
-    short_name: 'MedTracker',
-    description: 'A PWA to easily fill out medical forms',
+    name: 'FORMULAIRE CDT',
+    short_name: 'FormCDT',
+    description: 'Formulaire médical pour le suivi du cancer de la thyroïde',
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',

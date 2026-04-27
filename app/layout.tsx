@@ -8,18 +8,18 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Medical Form Tracker',
-  description: 'A PWA to easily fill out medical forms',
+  title: 'FORMULAIRE CDT',
+  description: 'Formulaire médical pour le suivi du cancer de la thyroïde',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en" className={cn(inter.className, "font-sans", geist.variable)}>
       <head>
-        <meta name="application-name" content="MedTracker" />
+        <meta name="application-name" content="FormCDT" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="MedTracker" />
+        <meta name="apple-mobile-web-app-title" content="FormCDT" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#3b82f6" />

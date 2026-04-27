@@ -252,8 +252,8 @@ export function Dashboard() {
             <ActivitySquare className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Dossiers Patients</h1>
-            <p className="text-sm text-gray-500 mt-1">Gérez et exportez vos données médicales thyroidiennes.</p>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">FORMULAIRE CDT</h1>
+            <p className="text-sm text-gray-500 mt-1">Gérez et exportez vos données médicales thyroïdiennes.</p>
           </div>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
