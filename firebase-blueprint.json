@@ -47,12 +47,58 @@
         "updatedAt": { "type": "number" }
       },
       "required": ["userId", "createdAt", "updatedAt"]
+    },
+    "admin": {
+      "title": "Admin",
+      "description": "Admin users",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["email", "createdAt"]
+    },
+    "user": {
+      "title": "User",
+      "description": "Registered users",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["email", "createdAt"]
+    },
+    "log": {
+      "title": "Log",
+      "description": "Activity logs",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["action", "userId", "userEmail", "timestamp"]
     }
   },
   "firestore": {
     "records/{recordId}": {
       "schema": { "$ref": "#/entities/medicalRecord" },
       "description": "Store all medical form submissions."
+    },
+    "admins/{adminId}": {
+      "schema": { "$ref": "#/entities/admin" },
+      "description": "Store admin roles."
+    },
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/user" },
+      "description": "Store app users."
+    },
+    "logs/{logId}": {
+      "schema": { "$ref": "#/entities/log" },
+      "description": "Store application activity logs."
     }
   }
 }

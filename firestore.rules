@@ -14,6 +14,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isSignedIn() && (request.auth.token.email == 'agbotonfrejuste@gmail.com' || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
     function incoming() {
       return request.resource.data;
     }
@@ -22,10 +26,46 @@ service cloud.firestore {
       return resource.data;
     }
 
+    function isValidAdmin(data) {
+      return data.keys().hasAll(['email', 'createdAt'])
+        && data.email is string
+        && data.createdAt is number;
+    }
+
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      // Allow creation of admin by another admin
+      allow create: if isAdmin() && isValidId(adminId) && isValidAdmin(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read, list: if isAdmin();
+      // User can read their own profile, or create it
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid
+        && incoming().keys().hasAll(['email', 'createdAt'])
+        && incoming().email is string
+        && incoming().createdAt is number;
+      // Admin can't modify users, only see them to promote
+    }
+
+    match /logs/{logId} {
+      allow read, list: if isAdmin();
+      allow create: if isSignedIn() 
+        && isValidId(logId) 
+        && incoming().keys().hasAll(['action', 'userId', 'userEmail', 'timestamp'])
+        && incoming().action is string
+        && incoming().userEmail is string
+        && incoming().userId == request.auth.uid
+        && incoming().timestamp is number;
+    }
+
     function isValidMedicalRecord(data) {
       return data.keys().hasAll(['userId', 'createdAt', 'updatedAt'])
         && data.userId is string && data.userId.size() <= 128
-        && data.userId == request.auth.uid
+        // User creates for themself, or admin testing
+        && (data.userId == request.auth.uid || isAdmin())
         && data.createdAt is number
         && data.updatedAt is number
         // Check string fields with sizes to avoid payload bloat
@@ -50,12 +90,12 @@ service cloud.firestore {
         && (data.get('nbreCures', 0) is number)
         && (data.get('actCum', 0) is number)
         && (data.get('suivi', 0) is number)
-        && (data.get('dcdAge', 0) is number)
+        && (data.get('dcdAge', 0) is number);
     }
 
     match /records/{recordId} {
-      allow read: if isSignedIn() && existing().userId == request.auth.uid;
-      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       
       allow create: if isSignedIn()
         && isValidId(recordId)
@@ -63,7 +103,7 @@ service cloud.firestore {
 
       allow update: if isSignedIn()
         && isValidMedicalRecord(incoming())
-        && existing().userId == request.auth.uid
+        && (existing().userId == request.auth.uid || isAdmin())
         && incoming().userId == existing().userId
         && incoming().createdAt == existing().createdAt
         && incoming().diff(existing()).affectedKeys().hasOnly([
@@ -74,7 +114,7 @@ service cloud.firestore {
             'actCum', 'suivi', 'rep2ans', 'rep5ans', 'rep10ans', 'dcd', 'dcdAge'
         ]);
 
-      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
     }
   }
 }

@@ -42,8 +42,8 @@ export function PWAInstallPrompt() {
             <Download className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Installer l'application</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Accès rapide depuis votre écran d'accueil.</p>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Installer l&apos;application</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Accès rapide depuis votre écran d&apos;accueil.</p>
           </div>
         </div>
         <button onClick={() => setShowPrompt(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">

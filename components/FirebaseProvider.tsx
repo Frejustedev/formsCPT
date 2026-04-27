@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, User, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer, setDoc } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
@@ -12,6 +12,7 @@ export const auth = getAuth(app);
 
 type FirebaseContextType = {
   user: User | null;
+  isAdmin: boolean;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   logOut: () => Promise<void>;
@@ -19,6 +20,7 @@ type FirebaseContextType = {
 
 const FirebaseContext = createContext<FirebaseContextType>({
   user: null,
+  isAdmin: false,
   loading: true,
   signInWithGoogle: async () => {},
   logOut: async () => {},
@@ -26,6 +28,7 @@ const FirebaseContext = createContext<FirebaseContextType>({
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,8 +44,42 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     }
     testConnection();
 
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       setUser(user);
+      if (user) {
+        // Track users
+        try {
+          // If we fail because of network, it's fine, we'll try again later. But we should try to create them if they login
+          const uid = user.uid;
+          const email = user.email || '';
+          
+          if (!email.trim()) {
+            throw new Error("No user email");
+          }
+          
+          await setDoc(doc(db, 'users', uid), {
+             email: email,
+             displayName: user.displayName || email.split('@')[0],
+             createdAt: Date.now()
+          }, { merge: true });
+        } catch(e) {
+          console.error("Could not register user", e);
+        }
+
+        // Check if root admin or in admins collection
+        if (user.email === 'agbotonfrejuste@gmail.com') {
+          setIsAdmin(true);
+        } else {
+          try {
+            const adminDoc = await getDocFromServer(doc(db, 'admins', user.uid));
+            setIsAdmin(adminDoc.exists());
+          } catch {
+            setIsAdmin(false);
+          }
+        }
+      } else {
+        setIsAdmin(false);
+      }
       setLoading(false);
     });
 
@@ -77,7 +114,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <FirebaseContext.Provider value={{ user, loading, signInWithGoogle, logOut }}>
+    <FirebaseContext.Provider value={{ user, isAdmin, loading, signInWithGoogle, logOut }}>
       {children}
     </FirebaseContext.Provider>
   );
@@ -120,4 +157,21 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
+}
+
+// Global logger helper
+export async function logAction(action: string, details: string) {
+  if (!auth.currentUser) return;
+  try {
+    const logId = crypto.randomUUID();
+    await setDoc(doc(db, 'logs', logId), {
+      action,
+      userId: auth.currentUser.uid,
+      userEmail: auth.currentUser.email || '',
+      details,
+      timestamp: Date.now()
+    });
+  } catch (e) {
+    console.error("Could not write log", e);
+  }
 }

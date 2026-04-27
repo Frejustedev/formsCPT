@@ -4,6 +4,7 @@ import { FirebaseProvider, useFirebase } from '@/components/FirebaseProvider';
 import { Dashboard } from '@/components/Dashboard';
 import { Button } from '@/components/ui/button';
 import { Stethoscope } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 function AppContent() {
   const { user, loading, signInWithGoogle } = useFirebase();
@@ -18,7 +19,10 @@ function AppContent() {
 
   if (!user) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50/50 dark:bg-gray-950/50">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50/50 dark:bg-gray-950/50 relative">
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+          <ThemeToggle />
+        </div>
         <div className="w-full max-w-md bg-white dark:bg-gray-900 p-8 rounded-3xl shadow-xl shadow-gray-200/50 dark:shadow-none text-center space-y-6 border border-gray-100 dark:border-gray-800 animate-in fade-in zoom-in-95 duration-500">
           <div className="mx-auto w-20 h-20 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-6 ring-8 ring-blue-50/50 dark:ring-blue-900/20">
             <Stethoscope className="w-10 h-10" />

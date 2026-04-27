@@ -83,19 +83,16 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
     },
   });
 
-  // Watch for changes to save draft automatically
-  const allValues = watch();
-
   useEffect(() => {
     // only save draft if it's a new record creation (initialValues is empty or undefined)
     if (!initialValues) {
-      const debounceTimeout = setTimeout(() => {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(allValues));
+      const subscription = watch((value) => {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(value));
         setDraftSavedAt(new Date());
-      }, 2000);
-      return () => clearTimeout(debounceTimeout);
+      });
+      return () => subscription.unsubscribe();
     }
-  }, [allValues, initialValues]);
+  }, [watch, initialValues]);
 
   const clearDraft = () => {
     localStorage.removeItem(DRAFT_KEY);
