@@ -8,9 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, FileText, Activity, Stethoscope, UserIcon, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, FileText, Activity, Stethoscope, UserIcon, CheckCircle2, Save } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+const DRAFT_KEY = 'medical_record_draft';
 
 interface RecordFormProps {
   initialValues?: Partial<MedicalRecordFormValues>;
@@ -20,7 +22,24 @@ interface RecordFormProps {
 }
 
 export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: RecordFormProps) {
-  const { register, control, handleSubmit, watch, formState: { errors } } = useForm<MedicalRecordFormValues>({
+  const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null);
+
+  const getInitialFormValues = (): Partial<MedicalRecordFormValues> => {
+    if (initialValues) return initialValues;
+    if (typeof window !== 'undefined') {
+      const draft = localStorage.getItem(DRAFT_KEY);
+      if (draft) {
+        try {
+          return JSON.parse(draft);
+        } catch (e) {
+          console.error("Impossible de lire le brouillon", e);
+        }
+      }
+    }
+    return {};
+  };
+
+  const { register, control, handleSubmit, watch, reset, formState: { errors } } = useForm<MedicalRecordFormValues>({
     resolver: zodResolver(medicalRecordSchema as any),
     defaultValues: {
       numeroDossier: '',
@@ -60,9 +79,35 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
       rep10ans: 'NP',
       dcd: 'NP',
       dcdAge: 0,
-      ...initialValues,
+      ...getInitialFormValues(),
     },
   });
+
+  // Watch for changes to save draft automatically
+  const allValues = watch();
+
+  useEffect(() => {
+    // only save draft if it's a new record creation (initialValues is empty or undefined)
+    if (!initialValues) {
+      const debounceTimeout = setTimeout(() => {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(allValues));
+        setDraftSavedAt(new Date());
+      }, 2000);
+      return () => clearTimeout(debounceTimeout);
+    }
+  }, [allValues, initialValues]);
+
+  const clearDraft = () => {
+    localStorage.removeItem(DRAFT_KEY);
+    setDraftSavedAt(null);
+  };
+
+  const onSubmitCallback = (data: MedicalRecordFormValues) => {
+    onSubmit(data);
+    if (!initialValues) {
+      clearDraft();
+    }
+  };
 
   const dcdWatcher = watch('dcd');
 
@@ -154,25 +199,21 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
     </div>
   );
 
-  const onSubmitCallback = (data: MedicalRecordFormValues) => {
-    onSubmit(data);
-  };
-
   return (
     <form onSubmit={handleSubmit(onSubmitCallback)} className="space-y-6 pb-20 relative">
       <Tabs defaultValue="identification" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto p-1 mb-6 bg-gray-100/50 backdrop-blur-sm rounded-xl">
-          <TabsTrigger value="identification" className="py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all">
-            <UserIcon className="w-4 h-4" /> <span className="hidden sm:inline">Identification</span>
+        <TabsList className="flex overflow-x-auto w-full hide-scrollbar h-auto p-1 mb-6 bg-gray-100/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-xl justify-start md:grid md:grid-cols-4">
+          <TabsTrigger value="identification" className="flex-1 min-w-[140px] py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-950 data-[state=active]:shadow-sm rounded-lg flex items-center justify-center gap-2 transition-all">
+            <UserIcon className="w-4 h-4" /> <span>Identification</span>
           </TabsTrigger>
-          <TabsTrigger value="antecedents" className="py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all">
-            <FileText className="w-4 h-4" /> <span className="hidden sm:inline">Antécédents</span>
+          <TabsTrigger value="antecedents" className="flex-1 min-w-[140px] py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-950 data-[state=active]:shadow-sm rounded-lg flex items-center justify-center gap-2 transition-all">
+            <FileText className="w-4 h-4" /> <span>Antécédents</span>
           </TabsTrigger>
-          <TabsTrigger value="tumeur" className="py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all">
-            <Activity className="w-4 h-4" /> <span className="hidden sm:inline">Tumeur</span>
+          <TabsTrigger value="tumeur" className="flex-1 min-w-[140px] py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-950 data-[state=active]:shadow-sm rounded-lg flex items-center justify-center gap-2 transition-all">
+            <Activity className="w-4 h-4" /> <span>Tumeur</span>
           </TabsTrigger>
-          <TabsTrigger value="traitement" className="py-3 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg flex items-center gap-2 transition-all">
-            <Stethoscope className="w-4 h-4" /> <span className="hidden sm:inline">Suivi</span>
+          <TabsTrigger value="traitement" className="flex-1 min-w-[140px] py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-950 data-[state=active]:shadow-sm rounded-lg flex items-center justify-center gap-2 transition-all">
+            <Stethoscope className="w-4 h-4" /> <span>Suivi</span>
           </TabsTrigger>
         </TabsList>
 
@@ -191,7 +232,7 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
                     <Input 
                       id="numeroDossier" 
                       placeholder="ex: 123/24" 
-                      className={errors.numeroDossier ? 'border-red-500' : 'bg-gray-50/50'} 
+                      className={errors.numeroDossier ? 'border-red-500' : 'bg-muted/50'} 
                       {...field}
                       onChange={(e) => {
                         let val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
@@ -208,12 +249,12 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
               </div>
               <div className="space-y-1.5 flex flex-col">
                 <Label htmlFor="nom" className="text-gray-700">Nom</Label>
-                <Input id="nom" placeholder="Saisir le nom" className={errors.nom ? 'border-red-500' : 'bg-gray-50/50'} {...register('nom')} />
+                <Input id="nom" placeholder="Saisir le nom" className={errors.nom ? 'border-red-500' : 'bg-muted/50'} {...register('nom')} />
                 {errors.nom && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.nom.message}</p>}
               </div>
               <div className="space-y-1.5 flex flex-col">
                 <Label htmlFor="prenoms" className="text-gray-700">Prénoms</Label>
-                <Input id="prenoms" placeholder="Saisir les prénoms" className={errors.prenoms ? 'border-red-500' : 'bg-gray-50/50'} {...register('prenoms')} />
+                <Input id="prenoms" placeholder="Saisir les prénoms" className={errors.prenoms ? 'border-red-500' : 'bg-muted/50'} {...register('prenoms')} />
                 {errors.prenoms && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {errors.prenoms.message}</p>}
               </div>
               {renderSelect('sexe', 'Sexe', [
@@ -223,11 +264,11 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
               ])}
               <div className="space-y-1.5 flex flex-col">
                 <Label htmlFor="ddn" className="text-gray-700">Date de Naissance</Label>
-                <Input id="ddn" type="date" className="bg-gray-50/50" {...register('ddn')} />
+                <Input id="ddn" type="date" className="bg-muted/50" {...register('ddn')} />
               </div>
               <div className="space-y-1.5 flex flex-col md:col-span-2">
                 <Label htmlFor="adresse" className="text-gray-700">Adresse</Label>
-                <Input id="adresse" placeholder="Adresse complète" className="bg-gray-50/50" {...register('adresse')} />
+                <Input id="adresse" placeholder="Adresse complète" className="bg-muted/50" {...register('adresse')} />
               </div>
             </CardContent>
           </Card>
@@ -244,7 +285,7 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
               {renderSelect('atcdPersCancer', 'ATCD Pers Cancer', ynnpOptions)}
               <div className="space-y-1.5 flex flex-col">
                 <Label htmlFor="ageDgc" className="text-gray-700">Age du Dgc (années)</Label>
-                <Input id="ageDgc" type="number" min="0" placeholder="0" className="bg-gray-50/50" {...register('ageDgc', { valueAsNumber: true })} />
+                <Input id="ageDgc" type="number" min="0" placeholder="0" className="bg-muted/50" {...register('ageDgc', { valueAsNumber: true })} />
               </div>
             </CardContent>
           </Card>
@@ -324,27 +365,27 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
                   ])}
                   <div className="space-y-1.5 flex flex-col">
                     <Label htmlFor="cg" className="text-gray-700">Curage Ganglionnaire (CG)</Label>
-                    <Input id="cg" placeholder="ex: Central, Latéral" className="bg-gray-50/50" {...register('cg')} />
+                    <Input id="cg" placeholder="ex: Central, Latéral" className="bg-muted/50" {...register('cg')} />
                   </div>
                   <div className="space-y-1.5 flex flex-col">
                     <Label htmlFor="tps" className="text-gray-700">Temps (tps)</Label>
-                    <Input id="tps" className="bg-gray-50/50" {...register('tps')} />
+                    <Input id="tps" className="bg-muted/50" {...register('tps')} />
                   </div>
                   <div className="space-y-1.5 flex flex-col">
                     <Label htmlFor="dgcI1" className="text-gray-700">Délai Dgc à Iode 131 (mois)</Label>
-                    <Input id="dgcI1" type="number" min="0" className="bg-gray-50/50" {...register('dgcI1', { valueAsNumber: true })} />
+                    <Input id="dgcI1" type="number" min="0" className="bg-muted/50" {...register('dgcI1', { valueAsNumber: true })} />
                   </div>
                   <div className="space-y-1.5 flex flex-col">
                     <Label htmlFor="chirI1" className="text-gray-700">Délai Chir à Iode 131 (mois)</Label>
-                    <Input id="chirI1" type="number" min="0" className="bg-gray-50/50" {...register('chirI1', { valueAsNumber: true })} />
+                    <Input id="chirI1" type="number" min="0" className="bg-muted/50" {...register('chirI1', { valueAsNumber: true })} />
                   </div>
                   <div className="space-y-1.5 flex flex-col">
                     <Label htmlFor="actCum" className="text-gray-700">Activité Cumulée (mCi)</Label>
-                    <Input id="actCum" type="number" min="0" className="bg-gray-50/50" {...register('actCum', { valueAsNumber: true })} />
+                    <Input id="actCum" type="number" min="0" className="bg-muted/50" {...register('actCum', { valueAsNumber: true })} />
                   </div>
                   <div className="space-y-1.5 flex flex-col">
                     <Label htmlFor="nbreCures" className="text-gray-700">Nbre de cures</Label>
-                    <Input id="nbreCures" type="number" min="0" className="bg-gray-50/50" {...register('nbreCures', { valueAsNumber: true })} />
+                    <Input id="nbreCures" type="number" min="0" className="bg-muted/50" {...register('nbreCures', { valueAsNumber: true })} />
                   </div>
                 </div>
               </div>
@@ -354,7 +395,7 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="space-y-1.5 flex flex-col">
                     <Label htmlFor="suivi" className="text-gray-700">Durée du suivi (années)</Label>
-                    <Input id="suivi" type="number" min="0" className="bg-gray-50/50" {...register('suivi', { valueAsNumber: true })} />
+                    <Input id="suivi" type="number" min="0" className="bg-muted/50" {...register('suivi', { valueAsNumber: true })} />
                   </div>
                   {renderSelect('rep2ans', 'Réponse à 2 ans', repOptions)}
                   {renderSelect('rep5ans', 'Réponse à 5 ans', repOptions)}
@@ -381,15 +422,22 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
       </Tabs>
 
       {/* Floating Action Bar */}
-      <div className="fixed sm:sticky bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] z-10 flex justify-between items-center px-4 rounded-t-2xl sm:rounded-none sm:bottom-4 sm:rounded-xl sm:border">
-        <div className="hidden sm:block">
-          <p className="text-sm text-gray-500 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500"/> Remplissage en cours...</p>
+      <div className="fixed sm:sticky bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] z-10 flex justify-between items-center px-4 rounded-t-2xl sm:rounded-none sm:bottom-4 sm:rounded-xl sm:border">
+        <div className="hidden sm:block flex-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-green-500"/> Remplissage en cours...
+            {draftSavedAt && (
+              <span className="text-xs ml-4 flex items-center gap-1 text-blue-500">
+                <Save className="w-3 h-3"/> Brouillon sauvegardé à {draftSavedAt.toLocaleTimeString('fr-FR')}
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
-          <Button type="button" variant="outline" className="flex-1 sm:flex-none border-gray-200 hover:bg-gray-50 text-gray-600" onClick={onCancel || (() => window.history.back())}>
+          <Button type="button" variant="outline" className="flex-1 sm:flex-none border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300" onClick={onCancel || (() => window.history.back())}>
             Annuler
           </Button>
-          <Button type="submit" className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20" disabled={isSubmitting}>
+          <Button type="submit" className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20" disabled={isSubmitting}>
             {isSubmitting ? (
               <span className="flex items-center gap-2">
                 <Activity className="w-4 h-4 animate-spin"/> Sauvegarde...

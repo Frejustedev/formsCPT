@@ -13,6 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { ThemeToggle } from './ThemeToggle';
 
 export function Dashboard() {
   const { user, logOut } = useFirebase();
@@ -257,7 +258,8 @@ export function Dashboard() {
           </div>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <Button variant="ghost" onClick={logOut} className="gap-2 text-gray-500 hover:text-gray-900">
+          <ThemeToggle />
+          <Button variant="ghost" onClick={logOut} className="gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-gray-50">
             <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Déconnexion</span>
           </Button>
           <DropdownMenu>
@@ -282,74 +284,74 @@ export function Dashboard() {
       </header>
 
       {loading ? (
-        <div className="flex justify-center items-center h-64 border rounded-2xl bg-white shadow-sm">
+        <div className="flex justify-center items-center h-64 border rounded-2xl bg-white dark:bg-gray-950 shadow-sm">
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p className="text-sm text-gray-500 font-medium">Chargement des dossiers...</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Chargement des dossiers...</p>
           </div>
         </div>
       ) : records.length === 0 ? (
-        <div className="text-center py-24 border border-dashed rounded-2xl bg-white shadow-sm flex flex-col items-center justify-center">
-          <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-4">
+        <div className="text-center py-24 border border-dashed rounded-2xl bg-white dark:bg-gray-950 shadow-sm flex flex-col items-center justify-center">
+          <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-2xl flex items-center justify-center mb-4">
             <FilePlus2 className="h-8 w-8 text-gray-400" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900">Aucun dossier médical</h3>
-          <p className="mt-2 text-gray-500 max-w-sm mx-auto">Vous n&apos;avez pas encore créé de dossier. Ajoutez votre premier patient pour commencer le suivi.</p>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Aucun dossier médical</h3>
+          <p className="mt-2 text-gray-500 dark:text-gray-400 max-w-sm mx-auto">Vous n&apos;avez pas encore créé de dossier. Ajoutez votre premier patient pour commencer le suivi.</p>
           <Button className="mt-8 shadow-sm shadow-primary/20" onClick={() => setIsFormOpen(true)}>
             <FilePlus2 className="w-4 h-4 mr-2"/>
             Créer le premier dossier
           </Button>
         </div>
       ) : (
-        <div className="overflow-x-auto bg-white border rounded-2xl shadow-sm">
+        <div className="overflow-x-auto bg-white dark:bg-gray-950 border rounded-2xl shadow-sm">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
-                <TableHead className="font-semibold text-gray-700">N° Dossier</TableHead>
-                <TableHead className="font-semibold text-gray-700">Patient</TableHead>
-                <TableHead className="font-semibold text-gray-700">Sexe</TableHead>
-                <TableHead className="font-semibold text-gray-700">Histologie</TableHead>
-                <TableHead className="font-semibold text-gray-700">TNM</TableHead>
-                <TableHead className="font-semibold text-gray-700 text-right pr-6">Actions</TableHead>
+              <TableRow className="bg-gray-50/80 dark:bg-gray-900/50 hover:bg-gray-50/80 dark:hover:bg-gray-900/50">
+                <TableHead className="font-semibold text-gray-700 dark:text-gray-300">N° Dossier</TableHead>
+                <TableHead className="font-semibold text-gray-700 dark:text-gray-300">Patient</TableHead>
+                <TableHead className="font-semibold text-gray-700 dark:text-gray-300">Sexe</TableHead>
+                <TableHead className="font-semibold text-gray-700 dark:text-gray-300">Histologie</TableHead>
+                <TableHead className="font-semibold text-gray-700 dark:text-gray-300">TNM</TableHead>
+                <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-right pr-6">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {records.map((r) => (
-                <TableRow key={r.id} className="group hover:bg-gray-50/50 transition-colors">
-                  <TableCell className="font-medium text-gray-900 border-l-2 border-transparent group-hover:border-primary">
-                    {r.numeroDossier || <span className="text-gray-300 italic">Non défini</span>}
+                <TableRow key={r.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors">
+                  <TableCell className="font-medium text-gray-900 dark:text-gray-100 border-l-2 border-transparent group-hover:border-primary">
+                    {r.numeroDossier || <span className="text-gray-300 dark:text-gray-600 italic">Non défini</span>}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="font-medium text-gray-900">{r.nom.toUpperCase()} {r.prenoms}</span>
-                      {r.ageDgc > 0 && <span className="text-xs text-gray-500">{r.ageDgc} ans au Dgc</span>}
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{r.nom.toUpperCase()} {r.prenoms}</span>
+                      {r.ageDgc > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{r.ageDgc} ans au Dgc</span>}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={r.sexe === 'M' ? 'default' : r.sexe === 'F' ? 'secondary' : 'outline'} className={r.sexe === 'NP' ? 'text-gray-400' : ''}>
+                    <Badge variant={r.sexe === 'M' ? 'default' : r.sexe === 'F' ? 'secondary' : 'outline'} className={r.sexe === 'NP' ? 'text-gray-400 dark:text-gray-500' : ''}>
                       {r.sexe}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <span className="text-sm font-medium">{r.cdt !== 'NP' ? r.cdt : '-'}</span>
+                      <span className="text-sm font-medium dark:text-gray-200">{r.cdt !== 'NP' ? r.cdt : '-'}</span>
                       {r.variante !== 'NP' && <span className="text-xs text-muted-foreground">{r.variante}</span>}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1 text-sm font-mono bg-gray-100 px-2 py-0.5 rounded w-fit">
+                    <div className="flex items-center gap-1 text-sm font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded w-fit dark:text-gray-300">
                       {r.t !== 'NP' || r.n !== 'NP' || r.m !== 'NP' ? `${r.t}${r.n}${r.m}` : 'NP'}
                     </div>
                   </TableCell>
                   <TableCell className="text-right pr-6">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" onClick={() => handleExportSinglePDF(r)} className="text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 h-8 w-8" title="Exporter PDF">
+                      <Button variant="ghost" size="icon" onClick={() => handleExportSinglePDF(r)} className="text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 h-8 w-8" title="Exporter PDF">
                         <FileText className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => openFormForEdit(r)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 h-8 w-8" title="Modifier">
+                      <Button variant="ghost" size="icon" onClick={() => openFormForEdit(r)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 h-8 w-8" title="Modifier">
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="text-red-400 hover:text-red-700 hover:bg-red-50 h-8 w-8" title="Supprimer">
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 h-8 w-8" title="Supprimer">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

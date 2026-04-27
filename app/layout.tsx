@@ -2,6 +2,8 @@ import type {Metadata} from 'next';
 import { Inter, Geist } from 'next/font/google';
 import './globals.css';
 import { cn } from "@/lib/utils";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -14,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="en" className={cn(inter.className, "font-sans", geist.variable)}>
+    <html lang="en" className={cn(inter.className, "font-sans", geist.variable)} suppressHydrationWarning>
       <head>
         <meta name="application-name" content="FormCDT" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -24,7 +26,17 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#3b82f6" />
       </head>
-      <body className="bg-gray-50 text-gray-900 min-h-screen" suppressHydrationWarning>{children}</body>
+      <body className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-screen" suppressHydrationWarning>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <PWAInstallPrompt />
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
