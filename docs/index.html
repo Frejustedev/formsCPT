@@ -1,0 +1,1026 @@
+<!doctype html>
+<html lang="fr" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registre CDT — Suivi des cancers thyroïdiens, 100 % local</title>
+    <meta
+      name="description"
+      content="Application portable Windows / Android pour le suivi des dossiers de cancer différencié de la thyroïde. 38 champs alignés sur la Fiche Guide CDT, exports Excel/PDF, sauvegarde JSON, hors-ligne."
+    />
+    <meta property="og:title" content="Registre CDT — 100 % local" />
+    <meta
+      property="og:description"
+      content="Application médicale portable pour le suivi du cancer différencié de la thyroïde. Aucun cloud, aucune installation."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://frejustedev.github.io/formsCPT/" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 2v2'/%3E%3Cpath d='M5 2v2'/%3E%3Cpath d='M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1'/%3E%3Cpath d='M8 15a6 6 0 0 0 12 0v-3'/%3E%3Ccircle cx='20' cy='10' r='2'/%3E%3C/svg%3E"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+            },
+            keyframes: {
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-8px)' },
+              },
+              shine: {
+                '0%': { 'background-position': '0% 50%' },
+                '100%': { 'background-position': '200% 50%' },
+              },
+            },
+            animation: {
+              float: 'float 6s ease-in-out infinite',
+              shine: 'shine 6s linear infinite',
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      .gradient-text {
+        background: linear-gradient(120deg, #3b82f6, #8b5cf6, #06b6d4, #3b82f6);
+        background-size: 200% 100%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        animation: shine 6s linear infinite;
+      }
+      .glass {
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+      .grid-bg {
+        background-image:
+          linear-gradient(to right, rgba(99, 102, 241, 0.06) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(99, 102, 241, 0.06) 1px, transparent 1px);
+        background-size: 56px 56px;
+      }
+      .blob {
+        filter: blur(80px);
+        opacity: 0.45;
+      }
+    </style>
+  </head>
+  <body class="font-sans bg-white text-slate-900 antialiased">
+    <!-- ========== NAV ========== -->
+    <header class="fixed top-0 left-0 right-0 z-50 glass bg-white/70 border-b border-slate-200/60">
+      <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <a href="#" class="flex items-center gap-2 font-bold text-slate-900">
+          <span
+            class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/25"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M11 2v2" /><path d="M5 2v2" /><path
+                d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1"
+              /><path d="M8 15a6 6 0 0 0 12 0v-3" /><circle cx="20" cy="10" r="2" />
+            </svg>
+          </span>
+          <span>Registre CDT</span>
+        </a>
+        <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+          <a href="#features" class="hover:text-slate-900 transition">Fonctionnalités</a>
+          <a href="#preview" class="hover:text-slate-900 transition">Aperçu</a>
+          <a href="#downloads" class="hover:text-slate-900 transition">Télécharger</a>
+          <a href="#faq" class="hover:text-slate-900 transition">FAQ</a>
+        </nav>
+        <a
+          href="#downloads"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-semibold shadow-sm hover:bg-slate-700 transition"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" x2="12" y1="15" y2="3" />
+          </svg>
+          Télécharger
+        </a>
+      </div>
+    </header>
+
+    <!-- ========== HERO ========== -->
+    <section class="relative pt-32 pb-24 overflow-hidden">
+      <div class="absolute inset-0 grid-bg pointer-events-none"></div>
+      <div
+        class="absolute -top-40 -right-32 w-[500px] h-[500px] rounded-full blob bg-blue-400 pointer-events-none"
+      ></div>
+      <div
+        class="absolute -bottom-32 -left-32 w-[500px] h-[500px] rounded-full blob bg-indigo-300 pointer-events-none"
+      ></div>
+
+      <div class="relative max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-center">
+        <div class="space-y-6">
+          <span
+            class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-xs font-semibold"
+          >
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+            v1.0.0 disponible &middot; Windows portable
+          </span>
+          <h1 class="text-5xl sm:text-6xl font-extrabold leading-[1.05] tracking-tight">
+            Le suivi du <span class="gradient-text">cancer thyroïdien</span> entièrement
+            <span class="gradient-text">hors-ligne</span>.
+          </h1>
+          <p class="text-lg text-slate-600 leading-relaxed max-w-xl">
+            38 champs alignés sur la <strong>Fiche Guide CDT</strong>, choix prédéfinis,
+            exports Excel et PDF. Vos données restent sur votre poste &mdash; aucune connexion
+            requise, aucun compte cloud.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-3 pt-2">
+            <a
+              href="https://github.com/Frejustedev/formsCPT/releases/download/v1.0.0/RegistreCDT-1.0.0-portable.exe"
+              class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  d="M0 3.5l9.7-1.3v9.7H0V3.5zm10.7-1.5L24 0v11.5H10.7V2zM0 12.7h9.7v9.7L0 21V12.7zm10.7 0H24V24l-13.3-1.8V12.7z"
+                />
+              </svg>
+              Télécharger pour Windows
+              <span class="text-xs font-normal opacity-80">(132 MB)</span>
+            </a>
+            <a
+              href="#downloads"
+              class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 hover:border-slate-300 transition"
+            >
+              Toutes les plateformes
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+              </svg>
+            </a>
+          </div>
+          <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-500 pt-2">
+            <span class="flex items-center gap-1.5">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-emerald-500"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Aucune installation
+            </span>
+            <span class="flex items-center gap-1.5">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-emerald-500"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              100 % gratuit
+            </span>
+            <span class="flex items-center gap-1.5">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-emerald-500"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Open source
+            </span>
+          </div>
+        </div>
+
+        <!-- App mockup -->
+        <div class="relative animate-float">
+          <div
+            class="absolute inset-0 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 blur-2xl opacity-20"
+          ></div>
+          <div
+            class="relative rounded-2xl border border-slate-200 shadow-2xl shadow-slate-900/10 bg-white overflow-hidden"
+          >
+            <div class="h-9 bg-slate-100 border-b border-slate-200 flex items-center gap-1.5 px-3">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <span class="ml-3 text-xs text-slate-500 font-medium">Registre CDT</span>
+            </div>
+            <div class="p-5 space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-base font-bold text-slate-900">Tableau de bord</div>
+                  <div class="text-xs text-slate-500">142 patients suivis</div>
+                </div>
+                <span
+                  class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <line x1="12" x2="12" y1="5" y2="19" /><line x1="5" x2="19" y1="12" y2="12" />
+                  </svg>
+                  Nouveau dossier
+                </span>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="rounded-lg bg-slate-50 p-3 border border-slate-100">
+                  <div class="text-[11px] text-slate-500 font-medium">Total patients</div>
+                  <div class="text-2xl font-bold text-slate-900 tabular-nums">142</div>
+                </div>
+                <div class="rounded-lg bg-slate-50 p-3 border border-slate-100">
+                  <div class="text-[11px] text-slate-500 font-medium">Sexe (F / M)</div>
+                  <div class="text-2xl font-bold text-slate-900 tabular-nums">98 / 44</div>
+                </div>
+                <div class="rounded-lg bg-slate-50 p-3 border border-slate-100">
+                  <div class="text-[11px] text-slate-500 font-medium">Variante principale</div>
+                  <div class="text-sm font-bold text-slate-900">CPT (78%)</div>
+                </div>
+                <div class="rounded-lg bg-slate-50 p-3 border border-slate-100">
+                  <div class="text-[11px] text-slate-500 font-medium">Âge moyen Dgc</div>
+                  <div class="text-2xl font-bold text-slate-900 tabular-nums">42 ans</div>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div class="flex items-center gap-3 text-xs">
+                  <span class="w-24 text-slate-600 truncate">Vésiculaire</span>
+                  <div class="flex-1 bg-slate-100 rounded h-1.5">
+                    <div class="bg-blue-500 h-1.5 rounded" style="width: 68%"></div>
+                  </div>
+                  <span class="tabular-nums w-6 text-right text-slate-700">42</span>
+                </div>
+                <div class="flex items-center gap-3 text-xs">
+                  <span class="w-24 text-slate-600 truncate">Oncocytaire</span>
+                  <div class="flex-1 bg-slate-100 rounded h-1.5">
+                    <div class="bg-blue-500 h-1.5 rounded" style="width: 35%"></div>
+                  </div>
+                  <span class="tabular-nums w-6 text-right text-slate-700">21</span>
+                </div>
+                <div class="flex items-center gap-3 text-xs">
+                  <span class="w-24 text-slate-600 truncate">NIFTP</span>
+                  <div class="flex-1 bg-slate-100 rounded h-1.5">
+                    <div class="bg-blue-500 h-1.5 rounded" style="width: 18%"></div>
+                  </div>
+                  <span class="tabular-nums w-6 text-right text-slate-700">11</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== STATS ========== -->
+    <section class="border-y border-slate-200 bg-slate-50/50">
+      <div class="max-w-6xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div class="text-center">
+          <div class="text-3xl sm:text-4xl font-extrabold text-slate-900">38</div>
+          <div class="text-sm text-slate-500 mt-1">champs prédéfinis</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl sm:text-4xl font-extrabold text-slate-900">100 %</div>
+          <div class="text-sm text-slate-500 mt-1">local, hors-ligne</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl sm:text-4xl font-extrabold text-slate-900">3</div>
+          <div class="text-sm text-slate-500 mt-1">plateformes (Win, Android, iOS)</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl sm:text-4xl font-extrabold text-slate-900">0&nbsp;€</div>
+          <div class="text-sm text-slate-500 mt-1">aucun coût, open source</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== FEATURES ========== -->
+    <section id="features" class="py-24">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="max-w-2xl mx-auto text-center mb-16">
+          <span
+            class="inline-block px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold tracking-wide uppercase"
+            >Fonctionnalités</span
+          >
+          <h2 class="text-4xl sm:text-5xl font-extrabold mt-4 tracking-tight">
+            Tout ce qu'il faut pour un registre médical sérieux.
+          </h2>
+          <p class="text-lg text-slate-600 mt-4">
+            Conçu pour la pratique clinique : saisie rapide, suivi rigoureux, export
+            fiable.
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Feature -->
+          <div
+            class="group rounded-2xl bg-white border border-slate-200 p-6 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition"
+          >
+            <div
+              class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 group-hover:bg-blue-100 transition"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" x2="8" y1="13" y2="13" />
+                <line x1="16" x2="8" y1="17" y2="17" />
+                <line x1="10" x2="8" y1="9" y2="9" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold mb-2">Fiche Guide CDT intégrée</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">
+              Les 38 champs de la fiche officielle, choix prédéfinis (CPT/CVT/COT,
+              T1-T4, R0/R1/R2, RC/Récidive…). Plus de saisies libres incohérentes.
+            </p>
+          </div>
+
+          <div
+            class="group rounded-2xl bg-white border border-slate-200 p-6 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition"
+          >
+            <div
+              class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4 group-hover:bg-emerald-100 transition"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect width="20" height="14" x="2" y="3" rx="2" />
+                <line x1="8" x2="16" y1="21" y2="21" />
+                <line x1="12" x2="12" y1="17" y2="21" />
+                <path d="M2 10h20" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold mb-2">100 % local, 100 % privé</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">
+              Aucune donnée ne quitte votre machine. Pas de cloud, pas de compte, pas
+              d'inscription. Conforme aux exigences de confidentialité médicale.
+            </p>
+          </div>
+
+          <div
+            class="group rounded-2xl bg-white border border-slate-200 p-6 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition"
+          >
+            <div
+              class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 group-hover:bg-amber-100 transition"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" x2="12" y1="15" y2="3" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold mb-2">Exports Excel & PDF</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">
+              Liste complète au format `.xlsx` pour l'analyse, fiche patient
+              individuelle au format PDF prête à imprimer ou archiver.
+            </p>
+          </div>
+
+          <div
+            class="group rounded-2xl bg-white border border-slate-200 p-6 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition"
+          >
+            <div
+              class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4 group-hover:bg-purple-100 transition"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                <line x1="8" x2="16" y1="21" y2="21" />
+                <line x1="12" x2="12" y1="17" y2="21" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold mb-2">Multi-plateforme</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">
+              Windows en .exe portable, Android en APK, iOS via Xcode. Une seule base
+              de code, une expérience unifiée. Vraiment portable : copier le fichier,
+              ça marche.
+            </p>
+          </div>
+
+          <div
+            class="group rounded-2xl bg-white border border-slate-200 p-6 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition"
+          >
+            <div
+              class="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mb-4 group-hover:bg-rose-100 transition"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold mb-2">Audit-trail automatique</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">
+              Chaque modification crée un instantané daté de l'état précédent.
+              Traçabilité régulatoire pour un registre médical sérieux.
+            </p>
+          </div>
+
+          <div
+            class="group rounded-2xl bg-white border border-slate-200 p-6 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition"
+          >
+            <div
+              class="w-12 h-12 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center mb-4 group-hover:bg-cyan-100 transition"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold mb-2">Sauvegarde JSON</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">
+              Export et import de l'intégralité du registre en un clic. Migration
+              entre postes triviale, archivage simple, lisible par n'importe quel
+              outil.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== PREVIEW ========== -->
+    <section id="preview" class="py-24 bg-slate-50">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="max-w-2xl mx-auto text-center mb-12">
+          <span
+            class="inline-block px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold tracking-wide uppercase"
+            >Aperçu</span
+          >
+          <h2 class="text-4xl sm:text-5xl font-extrabold mt-4 tracking-tight">
+            Saisie rapide, suivi rigoureux.
+          </h2>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="rounded-2xl bg-white border border-slate-200 p-8 shadow-sm">
+            <h3 class="text-xl font-bold mb-3">Formulaire à 4 onglets</h3>
+            <p class="text-slate-600 mb-6">
+              Identification, antécédents, tumeur (TNM, histologie), traitement &amp;
+              suivi. Indicateur de progression par onglet, navigation
+              Précédent / Suivant, brouillon auto-sauvegardé.
+            </p>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+              <div class="rounded-lg bg-slate-50 px-3 py-2 flex items-center justify-between">
+                <span class="font-medium">Identification</span>
+                <span
+                  class="text-[11px] px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 font-semibold"
+                  >6/6</span
+                >
+              </div>
+              <div class="rounded-lg bg-slate-50 px-3 py-2 flex items-center justify-between">
+                <span class="font-medium">Antécédents</span>
+                <span
+                  class="text-[11px] px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 font-semibold"
+                  >4/4</span
+                >
+              </div>
+              <div class="rounded-lg bg-slate-50 px-3 py-2 flex items-center justify-between">
+                <span class="font-medium">Tumeur</span>
+                <span
+                  class="text-[11px] px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 font-semibold"
+                  >12/15</span
+                >
+              </div>
+              <div class="rounded-lg bg-slate-50 px-3 py-2 flex items-center justify-between">
+                <span class="font-medium">Suivi</span>
+                <span
+                  class="text-[11px] px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 font-semibold"
+                  >5/13</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl bg-white border border-slate-200 p-8 shadow-sm">
+            <h3 class="text-xl font-bold mb-3">Tableau de bord</h3>
+            <p class="text-slate-600 mb-6">
+              Statistiques en temps réel, recherche par nom / N° dossier, filtres par
+              sexe, âge, histologie, statut vital. Tri persistant dans l'URL.
+            </p>
+            <div class="space-y-3">
+              <div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-50">
+                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                <span class="text-sm font-medium flex-1">CPT &mdash; Papillaire</span>
+                <span class="text-sm tabular-nums text-slate-500">78&thinsp;%</span>
+              </div>
+              <div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-50">
+                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                <span class="text-sm font-medium flex-1">CVT &mdash; Vésiculaire</span>
+                <span class="text-sm tabular-nums text-slate-500">17&thinsp;%</span>
+              </div>
+              <div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-50">
+                <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                <span class="text-sm font-medium flex-1">COT &mdash; Oncocytaire</span>
+                <span class="text-sm tabular-nums text-slate-500">5&thinsp;%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== DOWNLOADS ========== -->
+    <section id="downloads" class="py-24">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="max-w-2xl mx-auto text-center mb-16">
+          <span
+            class="inline-block px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold tracking-wide uppercase"
+            >Téléchargement</span
+          >
+          <h2 class="text-4xl sm:text-5xl font-extrabold mt-4 tracking-tight">
+            Choisissez votre plateforme.
+          </h2>
+          <p class="text-lg text-slate-600 mt-4">
+            Tous les binaires sont gratuits, hors-ligne et open source.
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6">
+          <!-- Windows -->
+          <div
+            class="relative rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 p-px shadow-xl shadow-blue-500/20"
+          >
+            <div class="rounded-2xl bg-white p-8 h-full flex flex-col">
+              <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                      <path
+                        d="M0 3.5l9.7-1.3v9.7H0V3.5zm10.7-1.5L24 0v11.5H10.7V2zM0 12.7h9.7v9.7L0 21V12.7zm10.7 0H24V24l-13.3-1.8V12.7z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="font-bold text-slate-900">Windows</div>
+                    <div class="text-xs text-slate-500">10 / 11 &middot; 64-bit</div>
+                  </div>
+                </div>
+                <span class="px-2 py-1 rounded-md bg-emerald-100 text-emerald-700 text-xs font-bold">
+                  Disponible
+                </span>
+              </div>
+              <p class="text-sm text-slate-600 leading-relaxed mb-6 flex-1">
+                Fichier `.exe` portable. Aucune installation, aucun privilège admin.
+                La base de données vit à côté du fichier.
+              </p>
+              <a
+                href="https://github.com/Frejustedev/formsCPT/releases/download/v1.0.0/RegistreCDT-1.0.0-portable.exe"
+                class="inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-semibold hover:shadow-lg hover:shadow-blue-500/30 transition"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" x2="12" y1="15" y2="3" />
+                </svg>
+                Télécharger (132 MB)
+              </a>
+              <div class="text-[11px] text-slate-400 text-center mt-3">v1.0.0</div>
+            </div>
+          </div>
+
+          <!-- Android -->
+          <div
+            class="rounded-2xl bg-white border border-slate-200 p-8 flex flex-col"
+          >
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                      d="M17.523 15.341c-.6 0-1.084-.483-1.084-1.082s.484-1.083 1.084-1.083 1.083.484 1.083 1.083-.484 1.082-1.083 1.082m-11.046 0c-.6 0-1.084-.483-1.084-1.082s.484-1.083 1.084-1.083 1.083.484 1.083 1.083-.484 1.082-1.083 1.082m11.434-6.024l2.165-3.747a.450.450 0 0 0-.165-.614.452.452 0 0 0-.614.164l-2.193 3.797c-1.677-.766-3.554-1.193-5.604-1.193s-3.927.427-5.604 1.193l-2.193-3.797a.452.452 0 0 0-.614-.164.45.45 0 0 0-.165.614l2.165 3.747C1.499 11.137 0 13.972 0 17.235h24c0-3.263-1.499-6.098-6.089-7.918"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <div class="font-bold text-slate-900">Android</div>
+                  <div class="text-xs text-slate-500">7.0+ &middot; APK</div>
+                </div>
+              </div>
+              <span class="px-2 py-1 rounded-md bg-amber-100 text-amber-700 text-xs font-bold">
+                Bientôt
+              </span>
+            </div>
+            <p class="text-sm text-slate-600 leading-relaxed mb-6 flex-1">
+              APK signé pour installation directe. SQLite natif, base dans le sandbox
+              de l'application. Compatible tablette et smartphone.
+            </p>
+            <button
+              disabled
+              class="inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-slate-100 text-slate-400 font-semibold cursor-not-allowed"
+            >
+              En préparation
+            </button>
+            <a
+              href="https://github.com/Frejustedev/formsCPT/releases"
+              class="block text-center text-xs text-slate-500 hover:text-slate-700 mt-3 transition"
+              >Suivre la mise à disposition →</a
+            >
+          </div>
+
+          <!-- iOS -->
+          <div class="rounded-2xl bg-white border border-slate-200 p-8 flex flex-col">
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                      d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <div class="font-bold text-slate-900">iOS</div>
+                  <div class="text-xs text-slate-500">15+ &middot; iPhone / iPad</div>
+                </div>
+              </div>
+              <span class="px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-bold">
+                Sur demande
+              </span>
+            </div>
+            <p class="text-sm text-slate-600 leading-relaxed mb-6 flex-1">
+              Build iOS disponible via le code source. Nécessite Xcode et un compte
+              Apple Developer pour signer l'application.
+            </p>
+            <a
+              href="https://github.com/Frejustedev/formsCPT#-ios"
+              class="inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-700 transition"
+            >
+              Instructions de build
+            </a>
+            <div class="text-[11px] text-slate-400 text-center mt-3">macOS requis</div>
+          </div>
+        </div>
+
+        <p class="text-center text-sm text-slate-500 mt-10">
+          Code source complet sur
+          <a
+            href="https://github.com/Frejustedev/formsCPT"
+            class="font-semibold text-slate-900 hover:underline"
+            >GitHub</a
+          >
+          &middot; voir l'
+          <a
+            href="https://github.com/Frejustedev/formsCPT/releases"
+            class="font-semibold text-slate-900 hover:underline"
+            >historique des versions</a
+          >.
+        </p>
+      </div>
+    </section>
+
+    <!-- ========== FAQ ========== -->
+    <section id="faq" class="py-24 bg-slate-50">
+      <div class="max-w-3xl mx-auto px-6">
+        <div class="text-center mb-12">
+          <span
+            class="inline-block px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold tracking-wide uppercase"
+            >FAQ</span
+          >
+          <h2 class="text-4xl sm:text-5xl font-extrabold mt-4 tracking-tight">
+            Questions fréquentes
+          </h2>
+        </div>
+
+        <div class="space-y-4">
+          <details class="group rounded-xl border border-slate-200 bg-white p-5">
+            <summary
+              class="flex items-center justify-between cursor-pointer list-none font-semibold"
+            >
+              Mes données sont-elles vraiment sécurisées ?
+              <svg
+                class="w-5 h-5 transition-transform group-open:rotate-180 text-slate-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </summary>
+            <p class="text-slate-600 mt-3 text-sm leading-relaxed">
+              Oui. L'application ne fait aucune requête réseau. Toutes les données
+              vivent dans un fichier `registre.json` à côté de l'.exe (Windows) ou
+              dans le sandbox sécurisé de l'app (Android/iOS). Vous êtes propriétaire
+              du fichier, vous le copiez où vous voulez.
+            </p>
+          </details>
+
+          <details class="group rounded-xl border border-slate-200 bg-white p-5">
+            <summary
+              class="flex items-center justify-between cursor-pointer list-none font-semibold"
+            >
+              Comment partager les données entre plusieurs postes ?
+              <svg
+                class="w-5 h-5 transition-transform group-open:rotate-180 text-slate-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </summary>
+            <p class="text-slate-600 mt-3 text-sm leading-relaxed">
+              Utilisez l'export / import JSON depuis le panneau Administration. Vous
+              pouvez aussi placer le `registre.json` sur un dossier réseau partagé
+              (l'app ne supporte pas l'écriture concurrente, donc un seul utilisateur
+              à la fois).
+            </p>
+          </details>
+
+          <details class="group rounded-xl border border-slate-200 bg-white p-5">
+            <summary
+              class="flex items-center justify-between cursor-pointer list-none font-semibold"
+            >
+              Pourquoi pas de cloud ou de compte ?
+              <svg
+                class="w-5 h-5 transition-transform group-open:rotate-180 text-slate-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </summary>
+            <p class="text-slate-600 mt-3 text-sm leading-relaxed">
+              Choix délibéré. Les données médicales sont sensibles ; les héberger
+              dans le cloud ajoute des contraintes réglementaires (HDS, RGPD,
+              consentements) sans valeur ajoutée pour un registre individuel ou de
+              service.
+            </p>
+          </details>
+
+          <details class="group rounded-xl border border-slate-200 bg-white p-5">
+            <summary
+              class="flex items-center justify-between cursor-pointer list-none font-semibold"
+            >
+              Puis-je modifier les champs ou les choix prédéfinis ?
+              <svg
+                class="w-5 h-5 transition-transform group-open:rotate-180 text-slate-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </summary>
+            <p class="text-slate-600 mt-3 text-sm leading-relaxed">
+              Le code est open source. Toutes les listes sont centralisées dans un
+              seul fichier (`lib/options.ts`) et le schéma dans `lib/schemas.ts`.
+              Modifier, recompiler, redistribuer.
+            </p>
+          </details>
+
+          <details class="group rounded-xl border border-slate-200 bg-white p-5">
+            <summary
+              class="flex items-center justify-between cursor-pointer list-none font-semibold"
+            >
+              Y a-t-il un audit-trail ?
+              <svg
+                class="w-5 h-5 transition-transform group-open:rotate-180 text-slate-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </summary>
+            <p class="text-slate-600 mt-3 text-sm leading-relaxed">
+              Oui. Chaque modification d'un dossier crée un instantané daté de
+              l'état précédent (`record_versions`). Les exports / imports / créations
+              / suppressions sont aussi journalisés (visible dans Administration).
+            </p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== CTA FINAL ========== -->
+    <section class="py-24">
+      <div class="max-w-4xl mx-auto px-6">
+        <div
+          class="relative rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-12 sm:p-16 overflow-hidden text-center"
+        >
+          <div class="absolute inset-0 grid-bg opacity-20"></div>
+          <h2 class="relative text-3xl sm:text-4xl font-extrabold text-white mb-4">
+            Commencez à suivre vos patients dès maintenant.
+          </h2>
+          <p class="relative text-lg text-blue-100 mb-8 max-w-2xl mx-auto">
+            Téléchargez l'application Windows en un clic. Aucun compte requis, vos
+            données restent chez vous.
+          </p>
+          <a
+            href="https://github.com/Frejustedev/formsCPT/releases/download/v1.0.0/RegistreCDT-1.0.0-portable.exe"
+            class="relative inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white text-blue-700 font-bold shadow-2xl shadow-blue-900/30 hover:scale-105 transition"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path
+                d="M0 3.5l9.7-1.3v9.7H0V3.5zm10.7-1.5L24 0v11.5H10.7V2zM0 12.7h9.7v9.7L0 21V12.7zm10.7 0H24V24l-13.3-1.8V12.7z"
+              />
+            </svg>
+            Télécharger pour Windows
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== FOOTER ========== -->
+    <footer class="border-t border-slate-200">
+      <div
+        class="max-w-6xl mx-auto px-6 py-12 flex flex-col md:flex-row items-center justify-between gap-6"
+      >
+        <div class="flex items-center gap-3">
+          <span
+            class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M11 2v2" /><path d="M5 2v2" /><path
+                d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1"
+              /><path d="M8 15a6 6 0 0 0 12 0v-3" /><circle cx="20" cy="10" r="2" />
+            </svg>
+          </span>
+          <div>
+            <div class="font-bold text-slate-900">Registre CDT</div>
+            <div class="text-xs text-slate-500">© 2026 — Open source</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-6 text-sm text-slate-600">
+          <a
+            href="https://github.com/Frejustedev/formsCPT"
+            class="hover:text-slate-900 transition flex items-center gap-1.5"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path
+                d="M12 0C5.374 0 0 5.373 0 12 0 17.302 3.438 21.8 8.207 23.387c.6.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"
+              />
+            </svg>
+            Frejustedev/formsCPT
+          </a>
+          <a
+            href="https://github.com/Frejustedev/formsCPT/releases"
+            class="hover:text-slate-900 transition"
+            >Versions</a
+          >
+          <a
+            href="https://github.com/Frejustedev/formsCPT/issues"
+            class="hover:text-slate-900 transition"
+            >Signaler un bug</a
+          >
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
