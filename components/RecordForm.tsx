@@ -56,8 +56,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
-import { useFirebase, db } from './FirebaseProvider';
-import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
+import { useData } from './DataProvider';
 import { toast } from 'sonner';
 
 interface RecordFormProps {
@@ -102,7 +101,7 @@ function makeOptions<T extends readonly string[]>(values: T, labels?: Partial<Re
 }
 
 export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: RecordFormProps) {
-  const { user } = useFirebase();
+  const { db } = useData();
   const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('identification');
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -117,42 +116,38 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
   useEffect(() => {
     let cancelled = false;
     async function loadDraft() {
-      if (initialValues || !user) {
+      if (initialValues || !db) {
         setDraftLoaded(true);
         return;
       }
       try {
-        const draftDoc = await getDoc(doc(db, 'drafts', user.uid));
-        if (!cancelled && draftDoc.exists()) {
-          const raw = draftDoc.data().draftData;
-          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-          reset({ ...RECORD_DEFAULTS, ...parsed });
-          setDraftSavedAt(new Date(draftDoc.data().updatedAt));
+        const draft = await db.getDraft();
+        if (cancelled) return;
+        if (draft) {
+          reset({ ...RECORD_DEFAULTS, ...draft.data });
+          setDraftSavedAt(new Date(draft.updatedAt));
         }
       } catch (e) {
-        console.error('Failed to load cloud draft', e);
+        console.error('Failed to load draft', e);
       } finally {
         if (!cancelled) setDraftLoaded(true);
       }
     }
     loadDraft();
-    return () => { cancelled = true; };
-  }, [initialValues, user, reset]);
+    return () => {
+      cancelled = true;
+    };
+  }, [initialValues, db, reset]);
 
   useEffect(() => {
-    if (initialValues || !user || !draftLoaded) return;
+    if (initialValues || !db || !draftLoaded) return;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const subscription = watch((value) => {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(async () => {
         try {
-          const timestamp = Date.now();
-          await setDoc(doc(db, 'drafts', user.uid), {
-            userId: user.uid,
-            draftData: JSON.stringify(value),
-            updatedAt: timestamp,
-          });
-          setDraftSavedAt(new Date(timestamp));
+          await db.saveDraft(value as MedicalRecordFormValues);
+          setDraftSavedAt(new Date());
         } catch (e) {
           console.error('Failed to save draft', e);
         }
@@ -162,13 +157,13 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
       if (timeoutId) clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
-  }, [watch, initialValues, user, draftLoaded]);
+  }, [watch, initialValues, db, draftLoaded]);
 
   const dcdValue = useWatch({ control, name: 'dcd' });
   useEffect(() => {
     if (dcdValue !== 'Oui') {
       const current = form.getValues('dcdAge');
-      if (current && current !== 0) form.setValue('dcdAge', 0, { shouldDirty: true });
+      if (current) form.setValue('dcdAge', 0, { shouldDirty: true });
     }
   }, [dcdValue, form]);
 
@@ -181,9 +176,9 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
   }, [evValue, form]);
 
   const clearDraft = useCallback(async () => {
-    if (!user || initialValues) return;
+    if (!db || initialValues) return;
     try {
-      await deleteDoc(doc(db, 'drafts', user.uid));
+      await db.clearDraft();
       reset(RECORD_DEFAULTS);
       setDraftSavedAt(null);
       toast.success('Brouillon effacé');
@@ -191,12 +186,12 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
       console.error('Failed to clear draft', e);
       toast.error('Erreur lors de la suppression du brouillon');
     }
-  }, [user, initialValues, reset]);
+  }, [db, initialValues, reset]);
 
   const onSubmitCallback = (data: MedicalRecordFormValues) => {
     onSubmit(data);
-    if (!initialValues && user) {
-      deleteDoc(doc(db, 'drafts', user.uid)).catch((e) => console.error('Failed to delete draft on submit', e));
+    if (!initialValues && db) {
+      db.clearDraft().catch((e) => console.error('Failed to delete draft on submit', e));
     }
   };
 
@@ -255,7 +250,13 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
         max={extra?.max}
         disabled={extra?.disabled}
         className="bg-muted/50"
-        {...register(name, { valueAsNumber: true })}
+        {...register(name, {
+          setValueAs: (v) => {
+            if (v === '' || v === null || v === undefined) return 0;
+            const n = Number(v);
+            return Number.isFinite(n) ? n : 0;
+          },
+        })}
       />
       {extra?.help && <p className="text-xs text-muted-foreground mt-1">{extra.help}</p>}
       {errors[name] && (
@@ -493,7 +494,13 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
                         min={0}
                         max={120}
                         className="bg-white dark:bg-gray-900 border-red-200 dark:border-red-900 focus-visible:ring-red-500"
-                        {...register('dcdAge', { valueAsNumber: true })}
+                        {...register('dcdAge', {
+                          setValueAs: (v) => {
+                            if (v === '' || v === null || v === undefined) return 0;
+                            const n = Number(v);
+                            return Number.isFinite(n) ? n : 0;
+                          },
+                        })}
                       />
                     </div>
                   )}

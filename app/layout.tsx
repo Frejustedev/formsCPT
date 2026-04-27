@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 import { Toaster } from '@/components/ui/sonner';
-import { FirebaseProvider } from '@/components/FirebaseProvider';
+import { DataProvider } from '@/components/DataProvider';
 import { AppShell } from '@/components/AppShell';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
@@ -14,7 +14,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Registre Cancer Thyroïde',
-  description: 'Application de registre des cancers différenciés de la thyroïde',
+  description: 'Application portable de registre des cancers différenciés de la thyroïde',
   applicationName: 'Registre CDT',
   appleWebApp: {
     capable: true,
@@ -35,13 +35,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" className={cn(inter.className, 'font-sans', geist.variable)} suppressHydrationWarning>
       <body className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-screen" suppressHydrationWarning>
         <ErrorBoundary>
-          <FirebaseProvider>
+          <DataProvider>
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
               <AppShell>{children}</AppShell>
               <PWAInstallPrompt />
               <Toaster position="top-right" />
             </ThemeProvider>
-          </FirebaseProvider>
+          </DataProvider>
         </ErrorBoundary>
       </body>
     </html>

@@ -1,18 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  collection,
-  query,
-  onSnapshot,
-  doc,
-  deleteDoc,
-  where,
-  limit,
-  orderBy,
-  QueryConstraint,
-} from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType, useFirebase, logAction } from './FirebaseProvider';
+import { useData, logAction } from './DataProvider';
 import {
   MedicalRecordFormValues,
   StoredMedicalRecord,
@@ -20,7 +9,6 @@ import {
   RECORD_FIELD_LABELS,
 } from '@/lib/schemas';
 import { CDT_LABELS, CHIR_LABELS } from '@/lib/options';
-import { migrateStoredRecord } from '@/lib/migrate';
 import { Button, buttonVariants } from './ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import {
@@ -67,7 +55,6 @@ type SortField = 'createdAt' | 'numeroDossier' | 'nom' | 'ageDgc' | 'suivi';
 type SortDir = 'asc' | 'desc';
 
 const ITEMS_PER_PAGE = 20;
-const RECORDS_HARD_CAP = 1000;
 
 const SORT_LABELS: Record<SortField, string> = {
   createdAt: 'Date d\'ajout',
@@ -79,8 +66,7 @@ const SORT_LABELS: Record<SortField, string> = {
 
 function exportRow(r: StoredMedicalRecord) {
   return {
-    'ID': r.id,
-    'Auteur (userId)': r.userId,
+    ID: r.id,
     'Date Ajout': r.createdAt ? new Date(r.createdAt).toLocaleString('fr-FR') : '',
     'Dernière modif': r.updatedAt ? new Date(r.updatedAt).toLocaleString('fr-FR') : '',
     [RECORD_FIELD_LABELS.numeroDossier]: r.numeroDossier,
@@ -230,12 +216,11 @@ function exportSinglePDF(r: StoredMedicalRecord) {
 }
 
 export function Dashboard() {
-  const { user, isAdmin } = useFirebase();
+  const { db } = useData();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [records, setRecords] = useState<StoredMedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hardCapHit, setHardCapHit] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<StoredMedicalRecord | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -261,40 +246,37 @@ export function Dashboard() {
     [router, searchParams],
   );
 
+  const refresh = useCallback(async () => {
+    if (!db) return;
+    try {
+      const list = await db.listRecords();
+      setRecords(list);
+    } catch (e) {
+      console.error('Failed to load records', e);
+      toast.error('Impossible de charger les dossiers');
+    } finally {
+      setLoading(false);
+    }
+  }, [db]);
+
   useEffect(() => {
-    if (!user) return;
+    if (!db) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    const constraints: QueryConstraint[] = [];
-    if (!isAdmin) constraints.push(where('userId', '==', user.uid));
-    constraints.push(orderBy('createdAt', 'desc'));
-    constraints.push(limit(RECORDS_HARD_CAP));
-    const q = query(collection(db, 'records'), ...constraints);
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const rows = snapshot.docs.map((d) => migrateStoredRecord(d.id, d.data() as Record<string, unknown>));
-        setRecords(rows);
-        setHardCapHit(snapshot.size >= RECORDS_HARD_CAP);
-        setLoading(false);
-      },
-      (e) => {
-        handleFirestoreError(e, OperationType.LIST, 'records');
-        toast.error('Impossible de charger les dossiers');
-        setLoading(false);
-      },
-    );
-    return unsubscribe;
-  }, [user, isAdmin]);
+    refresh();
+    const off = db.onRecordsChanged(() => {
+      refresh();
+    });
+    return off;
+  }, [db, refresh]);
 
   const handleDelete = async () => {
-    if (!recordToDelete) return;
+    if (!recordToDelete || !db) return;
     try {
-      await deleteDoc(doc(db, 'records', recordToDelete.id));
+      await db.deleteRecord(recordToDelete.id);
       toast.success('Dossier supprimé');
-      logAction('DELETE_RECORD', `Dossier N° ${recordToDelete.numeroDossier || recordToDelete.id} supprimé.`);
+      logAction(db, 'DELETE_RECORD', `Dossier N° ${recordToDelete.numeroDossier || recordToDelete.id} supprimé.`);
     } catch (e) {
-      handleFirestoreError(e, OperationType.DELETE, `records/${recordToDelete.id}`);
+      console.error(e);
       toast.error('Erreur lors de la suppression');
     } finally {
       setRecordToDelete(null);
@@ -342,13 +324,9 @@ export function Dashboard() {
       if (r.variante) acc[r.variante] = (acc[r.variante] || 0) + 1;
       return acc;
     }, {});
-    const cdtCounts = records.reduce<Record<string, number>>((acc, r) => {
-      if (r.cdt) acc[r.cdt] = (acc[r.cdt] || 0) + 1;
-      return acc;
-    }, {});
     const aliveCount = records.filter((r) => r.dcd === 'Non').length;
     const dcdCount = records.filter((r) => r.dcd === 'Oui').length;
-    return { total, female, male, avgAge, variantCounts, cdtCounts, aliveCount, dcdCount };
+    return { total, female, male, avgAge, variantCounts, aliveCount, dcdCount };
   }, [records]);
 
   const variantStatsText = useMemo(() => {
@@ -363,12 +341,12 @@ export function Dashboard() {
 
   const handleExportXlsx = () => {
     exportRecordsExcel(filteredRecords, `Dossiers_CDT_${new Date().toISOString().split('T')[0]}.xlsx`);
-    logAction('EXPORT_XLSX', `${filteredRecords.length} dossier(s) exportés (Excel).`);
+    logAction(db, 'EXPORT_XLSX', `${filteredRecords.length} dossier(s) exportés (Excel).`);
   };
 
   const handleExportPDF = () => {
     exportRecordsPDF(filteredRecords, `Dossiers_CDT_${new Date().toISOString().split('T')[0]}.pdf`);
-    logAction('EXPORT_PDF', `${filteredRecords.length} dossier(s) exportés (PDF).`);
+    logAction(db, 'EXPORT_PDF', `${filteredRecords.length} dossier(s) exportés (PDF).`);
   };
 
   const renderPagination = () => {
@@ -383,32 +361,15 @@ export function Dashboard() {
           Affichage {(safePage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(safePage * ITEMS_PER_PAGE, filteredRecords.length)} sur {filteredRecords.length}
         </span>
         <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={safePage === 1}
-          >
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={safePage === 1}>
             <ChevronLeft className="w-4 h-4" />
           </Button>
           {pages.map((p) => (
-            <Button
-              key={p}
-              variant={safePage === p ? 'default' : 'outline'}
-              className="h-8 w-8 p-0"
-              onClick={() => setCurrentPage(p)}
-            >
+            <Button key={p} variant={safePage === p ? 'default' : 'outline'} className="h-8 w-8 p-0" onClick={() => setCurrentPage(p)}>
               {p}
             </Button>
           ))}
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={safePage === totalPages}
-          >
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}>
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
@@ -444,9 +405,7 @@ export function Dashboard() {
           </div>
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Tableau de bord</h1>
-            <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">
-              Registre des cancers différenciés de la thyroïde.
-            </p>
+            <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">Registre des cancers différenciés de la thyroïde.</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
@@ -488,12 +447,6 @@ export function Dashboard() {
           </Button>
         </div>
       </header>
-
-      {hardCapHit && (
-        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-xl p-3 text-sm text-amber-800 dark:text-amber-200">
-          {RECORDS_HARD_CAP} dossiers maximum affichés. Affinez les filtres pour voir les autres.
-        </div>
-      )}
 
       {records.length > 0 && (
         <div className="space-y-6">
@@ -554,12 +507,7 @@ export function Dashboard() {
 
               <div className="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
                 {['Tous', 'Masculin', 'Féminin'].map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => updateParam({ sexe: s })}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${filterSexe === s ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                  >
+                  <button key={s} type="button" onClick={() => updateParam({ sexe: s })} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${filterSexe === s ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>
                     {s === 'Tous' ? 'Tous' : s}
                   </button>
                 ))}
@@ -567,12 +515,7 @@ export function Dashboard() {
 
               <div className="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
                 {['Tous', '< 40 ans', '≥ 40 ans'].map((a) => (
-                  <button
-                    key={a}
-                    type="button"
-                    onClick={() => updateParam({ age: a })}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${filterAge === a ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                  >
+                  <button key={a} type="button" onClick={() => updateParam({ age: a })} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${filterAge === a ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>
                     {a === 'Tous' ? 'Tout âge' : a}
                   </button>
                 ))}
@@ -580,12 +523,7 @@ export function Dashboard() {
 
               <div className="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
                 {['Tous', 'CPT', 'CVT', 'COT'].map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => updateParam({ cdt: c })}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${filterCdt === c ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                  >
+                  <button key={c} type="button" onClick={() => updateParam({ cdt: c })} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${filterCdt === c ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>
                     {c === 'Tous' ? 'Toutes histo.' : c}
                   </button>
                 ))}
@@ -593,12 +531,7 @@ export function Dashboard() {
 
               <div className="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
                 {['Tous', 'Non', 'Oui', 'Perdu de vue'].map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => updateParam({ dcd: d })}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${filterDcd === d ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                  >
+                  <button key={d} type="button" onClick={() => updateParam({ dcd: d })} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${filterDcd === d ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>
                     {d === 'Tous' ? 'Tous DCD' : d === 'Non' ? 'Vivants' : d === 'Oui' ? 'Décédés' : 'Perdu de vue'}
                   </button>
                 ))}
@@ -674,7 +607,7 @@ export function Dashboard() {
                     <Button variant="outline" size="sm" onClick={() => exportSinglePDF(r)} className="text-emerald-600 dark:text-emerald-500 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 flex-1">
                       <FileText className="h-4 w-4 mr-2" /> PDF
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => router.push(`/records/${r.id}`)} className="text-blue-600 dark:text-blue-500 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 flex-1">
+                    <Button variant="outline" size="sm" onClick={() => router.push(`/records/edit?id=${r.id}`)} className="text-blue-600 dark:text-blue-500 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 flex-1">
                       <Edit2 className="h-4 w-4 mr-2" /> Modif.
                     </Button>
                     <Button variant="outline" size="icon" onClick={() => setRecordToDelete(r)} className="text-red-500 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/50">
@@ -746,7 +679,7 @@ export function Dashboard() {
                           <Button variant="ghost" size="icon" onClick={() => exportSinglePDF(r)} className="text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 h-8 w-8" title="Exporter PDF">
                             <FileText className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => router.push(`/records/${r.id}`)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 h-8 w-8" title="Modifier">
+                          <Button variant="ghost" size="icon" onClick={() => router.push(`/records/edit?id=${r.id}`)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 h-8 w-8" title="Modifier">
                             <Edit2 className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => setRecordToDelete(r)} className="text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 h-8 w-8" title="Supprimer">
@@ -774,9 +707,7 @@ export function Dashboard() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white">
-              Supprimer
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white">Supprimer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

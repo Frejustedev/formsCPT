@@ -1,14 +1,7 @@
 'use client';
 
 import { RecordForm } from '@/components/RecordForm';
-import {
-  handleFirestoreError,
-  OperationType,
-  useFirebase,
-  logAction,
-  isNumeroDossierTaken,
-  createMedicalRecord,
-} from '@/components/FirebaseProvider';
+import { useData, logAction } from '@/components/DataProvider';
 import { MedicalRecordFormValues } from '@/lib/schemas';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
@@ -16,28 +9,28 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export default function NewRecordPage() {
-  const { user } = useFirebase();
+  const { db } = useData();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (data: MedicalRecordFormValues) => {
-    if (!user) {
-      toast.error('Vous devez être connecté');
+    if (!db) {
+      toast.error('Base de données non disponible');
       return;
     }
     try {
       setSubmitting(true);
-      if (await isNumeroDossierTaken(data.numeroDossier)) {
+      if (await db.isNumeroDossierTaken(data.numeroDossier)) {
         toast.error(`Le numéro de dossier ${data.numeroDossier} existe déjà`);
         return;
       }
       const newId = crypto.randomUUID();
-      await createMedicalRecord(newId, data, user.uid);
+      await db.createRecord(newId, data);
       toast.success('Nouveau dossier créé avec succès');
-      logAction('CREATE_RECORD', `Dossier N° ${data.numeroDossier || newId} créé.`);
+      logAction(db, 'CREATE_RECORD', `Dossier N° ${data.numeroDossier || newId} créé.`);
       router.push('/');
     } catch (e) {
-      handleFirestoreError(e, OperationType.CREATE, 'records');
+      console.error(e);
       toast.error('Erreur lors de la création du dossier');
     } finally {
       setSubmitting(false);

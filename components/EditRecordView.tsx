@@ -1,79 +1,79 @@
 'use client';
 
 import { RecordForm } from '@/components/RecordForm';
-import {
-  handleFirestoreError,
-  OperationType,
-  useFirebase,
-  db,
-  logAction,
-  isNumeroDossierTaken,
-  updateMedicalRecord,
-} from '@/components/FirebaseProvider';
+import { useData, logAction } from '@/components/DataProvider';
 import { MedicalRecordFormValues, StoredMedicalRecord } from '@/lib/schemas';
-import { migrateStoredRecord } from '@/lib/migrate';
-import { doc, getDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
-export default function EditRecordPage() {
-  const { user } = useFirebase();
+export function EditRecordView() {
+  const { db } = useData();
   const router = useRouter();
-  const params = useParams();
-  const recordId = params?.id as string | undefined;
+  const searchParams = useSearchParams();
+  const recordId = searchParams.get('id') ?? '';
 
   const [submitting, setSubmitting] = useState(false);
   const [record, setRecord] = useState<StoredMedicalRecord | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!recordId) return;
+    if (!recordId || !db) return;
     let cancelled = false;
     async function fetchRecord() {
+      if (!db) return;
       try {
-        const docRef = doc(db, 'records', recordId as string);
-        const docSnap = await getDoc(docRef);
+        const fetched = await db.getRecord(recordId);
         if (cancelled) return;
-        if (docSnap.exists()) {
-          setRecord(migrateStoredRecord(docSnap.id, docSnap.data() as Record<string, unknown>));
-        } else {
+        if (!fetched) {
           toast.error("Ce dossier n'existe pas");
           router.push('/');
+          return;
         }
+        setRecord(fetched);
       } catch (e) {
-        handleFirestoreError(e, OperationType.GET, `records/${recordId}`);
+        console.error(e);
         toast.error('Erreur lors du chargement du dossier');
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     fetchRecord();
-    return () => { cancelled = true; };
-  }, [recordId, router]);
+    return () => {
+      cancelled = true;
+    };
+  }, [recordId, db, router]);
 
   const handleSubmit = async (data: MedicalRecordFormValues) => {
-    if (!recordId || !user) return;
+    if (!recordId || !db) return;
     try {
       setSubmitting(true);
       if (record && data.numeroDossier !== record.numeroDossier) {
-        if (await isNumeroDossierTaken(data.numeroDossier, recordId)) {
+        if (await db.isNumeroDossierTaken(data.numeroDossier, recordId)) {
           toast.error(`Le numéro de dossier ${data.numeroDossier} est déjà utilisé`);
           return;
         }
       }
-      await updateMedicalRecord(recordId, data, user.uid, user.email || '');
+      await db.updateRecord(recordId, data);
       toast.success('Dossier mis à jour avec succès');
-      logAction('UPDATE_RECORD', `Dossier N° ${data.numeroDossier || recordId} mis à jour.`);
+      logAction(db, 'UPDATE_RECORD', `Dossier N° ${data.numeroDossier || recordId} mis à jour.`);
       router.push('/');
     } catch (e) {
-      handleFirestoreError(e, OperationType.UPDATE, `records/${recordId}`);
+      console.error(e);
       toast.error('Erreur lors de la mise à jour du dossier');
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (!recordId) {
+    return (
+      <div className="flex-1 max-w-5xl mx-auto p-6">
+        <p className="text-gray-500">ID de dossier manquant.</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
