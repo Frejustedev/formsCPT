@@ -137,7 +137,7 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
         control={control}
         render={({ field }) => (
           <div>
-            <Select onValueChange={field.onChange} defaultValue={field.value as string}>
+            <Select onValueChange={field.onChange} value={field.value as string || ""}>
               <SelectTrigger className={errors[name] ? 'border-red-500 ring-red-500' : ''}>
                 <SelectValue placeholder="Sélectionner..." />
               </SelectTrigger>

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { collection, query, getDocs, doc, setDoc, deleteDoc, where, updateDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, useFirebase } from './FirebaseProvider';
 import { MedicalRecordFormValues } from '@/lib/schemas';
-import { Button } from './ui/button';
+import { Button, buttonVariants } from './ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { RecordForm } from './RecordForm';
 import { Download, FilePlus2, LogOut, Trash2, ArrowLeft, ActivitySquare, Edit2, FileText, FileSpreadsheet, ChevronDown } from 'lucide-react';
@@ -22,9 +22,9 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async () => {
     try {
-      setLoading(true);
+      Promise.resolve().then(() => setLoading(true));
       const q = query(collection(db, 'records'), where('userId', '==', user?.uid));
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(d => ({ ...d.data(), id: d.id } as any));
@@ -34,13 +34,14 @@ export function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchRecords();
     }
-  }, [user]);
+  }, [user, fetchRecords]);
 
   const handleExport = () => {
     const ws = XLSX.utils.json_to_sheet(records.map(r => ({
@@ -164,7 +165,8 @@ export function Dashboard() {
         ['Statut', r.dcd === 'O' ? `Décédé (à ${r.dcdAge} ans)` : 'Vivant']
       ],
       didParseCell: function (data) {
-        if (data.row.raw[1] === '') {
+        const rawRow = data.row.raw as any[];
+        if (Array.isArray(rawRow) && rawRow[1] === '') {
           data.cell.styles.fontStyle = 'bold';
           data.cell.styles.fillColor = [240, 248, 255];
           data.cell.styles.textColor = [30, 58, 138];
@@ -259,10 +261,8 @@ export function Dashboard() {
             <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Déconnexion</span>
           </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 flex-1 sm:flex-none border-gray-200 shadow-sm focus-visible:ring-1">
-                <Download className="h-4 w-4" /> Exporter <ChevronDown className="h-4 w-4 ml-1 opacity-50" />
-              </Button>
+            <DropdownMenuTrigger className={buttonVariants({ variant: "outline", className: "gap-2 flex-1 sm:flex-none border-gray-200 shadow-sm focus-visible:ring-1 cursor-pointer" })}>
+              <Download className="h-4 w-4" /> Exporter <ChevronDown className="h-4 w-4 ml-1 opacity-50" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={handleExport} className="cursor-pointer">

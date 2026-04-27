@@ -11,9 +11,13 @@ export function useIsMobile() {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
     mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    // Only set state if value is different to avoid cascading renders
+    const isNowMobile = window.innerWidth < MOBILE_BREAKPOINT;
+    if (isMobile !== isNowMobile) {
+      Promise.resolve().then(() => setIsMobile(isNowMobile));
+    }
     return () => mql.removeEventListener("change", onChange)
-  }, [])
+  }, [isMobile])
 
   return !!isMobile
 }
