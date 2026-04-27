@@ -3,24 +3,17 @@ import { Inter, Geist } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 import { Toaster } from '@/components/ui/sonner';
-import { DataProvider } from '@/components/DataProvider';
-import { AppShell } from '@/components/AppShell';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Registre Cancer Thyroïde',
-  description: 'Application portable de registre des cancers différenciés de la thyroïde',
+  title: 'Registre Cancer Thyroïde — 100% local, hors-ligne',
+  description: 'Application portable de suivi des dossiers de cancer différencié de la thyroïde. Téléchargements Windows et Android.',
   applicationName: 'Registre CDT',
-  appleWebApp: {
-    capable: true,
-    title: 'Registre CDT',
-    statusBarStyle: 'default',
-  },
+  appleWebApp: { capable: true, title: 'Registre CDT', statusBarStyle: 'default' },
   formatDetection: { telephone: false },
 };
 
@@ -33,15 +26,12 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className={cn(inter.className, 'font-sans', geist.variable)} suppressHydrationWarning>
-      <body className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-screen" suppressHydrationWarning>
+      <body className="bg-white text-slate-900 min-h-screen antialiased" suppressHydrationWarning>
         <ErrorBoundary>
-          <DataProvider>
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-              <AppShell>{children}</AppShell>
-              <PWAInstallPrompt />
-              <Toaster position="top-right" />
-            </ThemeProvider>
-          </DataProvider>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
+            {children}
+            <Toaster position="top-right" />
+          </ThemeProvider>
         </ErrorBoundary>
       </body>
     </html>

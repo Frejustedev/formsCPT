@@ -28,7 +28,7 @@ export default function NewRecordPage() {
       await db.createRecord(newId, data);
       toast.success('Nouveau dossier créé avec succès');
       logAction(db, 'CREATE_RECORD', `Dossier N° ${data.numeroDossier || newId} créé.`);
-      router.push('/');
+      router.push('/app');
     } catch (e) {
       console.error(e);
       toast.error('Erreur lors de la création du dossier');
@@ -43,7 +43,7 @@ export default function NewRecordPage() {
         <div>
           <button
             type="button"
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/app')}
             className="flex items-center gap-2 text-primary font-medium mb-1 hover:underline"
           >
             <ArrowLeft className="w-4 h-4" /> Retour aux dossiers
@@ -53,7 +53,7 @@ export default function NewRecordPage() {
           </h1>
         </div>
       </div>
-      <RecordForm onSubmit={handleSubmit} onCancel={() => router.push('/')} isSubmitting={submitting} />
+      <RecordForm onSubmit={handleSubmit} onCancel={() => router.push('/app')} isSubmitting={submitting} />
     </div>
   );
 }

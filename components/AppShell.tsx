@@ -25,9 +25,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const navLinks = [
-    { name: 'Tableau de bord', href: '/', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { name: 'Nouveau dossier', href: '/records/new', icon: <PlusCircle className="w-5 h-5" /> },
-    { name: 'Administration', href: '/admin', icon: <ShieldAlert className="w-5 h-5" /> },
+    { name: 'Tableau de bord', href: '/app', icon: <LayoutDashboard className="w-5 h-5" /> },
+    { name: 'Nouveau dossier', href: '/app/records/new', icon: <PlusCircle className="w-5 h-5" /> },
+    { name: 'Administration', href: '/app/admin', icon: <ShieldAlert className="w-5 h-5" /> },
   ];
 
   const platformLabel: Record<string, string> = {
@@ -49,7 +49,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1 text-sm font-medium">
           {navLinks.map((item) => {
-            const isActive = pathname === item.href;
+            const normalized = (pathname || '').replace(/\/$/, '');
+            const isActive = normalized === item.href || normalized === item.href + '/';
             return (
               <Link
                 key={item.href}
@@ -92,7 +93,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="absolute top-[65px] left-0 right-0 bottom-0 bg-white dark:bg-gray-900 z-20 flex flex-col animate-in fade-in slide-in-from-top-2">
             <div className="flex-1 overflow-y-auto py-4 px-4 space-y-2 text-base font-medium">
               {navLinks.map((item) => {
-                const isActive = pathname === item.href;
+                const normalized = (pathname || '').replace(/\/$/, '');
+            const isActive = normalized === item.href || normalized === item.href + '/';
                 return (
                   <Link
                     key={item.href}

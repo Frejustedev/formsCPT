@@ -240,7 +240,7 @@ export function Dashboard() {
         else next.set(k, v);
       }
       const qs = next.toString();
-      router.replace(qs ? `/?${qs}` : '/', { scroll: false });
+      router.replace(qs ? `/app?${qs}` : '/app', { scroll: false });
       setCurrentPage(1);
     },
     [router, searchParams],
@@ -442,7 +442,7 @@ export function Dashboard() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button onClick={() => router.push('/records/new')} className="gap-2 flex-1 sm:flex-none shadow-sm shadow-primary/20">
+          <Button onClick={() => router.push('/app/records/new')} className="gap-2 flex-1 sm:flex-none shadow-sm shadow-primary/20">
             <FilePlus2 className="h-4 w-4" /> Nouveau Dossier
           </Button>
         </div>
@@ -557,7 +557,7 @@ export function Dashboard() {
           <p className="mt-2 text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
             Aucun dossier n&apos;a encore été créé. Ajoutez votre premier patient pour commencer le suivi.
           </p>
-          <Button className="mt-8 shadow-sm shadow-primary/20" onClick={() => router.push('/records/new')}>
+          <Button className="mt-8 shadow-sm shadow-primary/20" onClick={() => router.push('/app/records/new')}>
             <FilePlus2 className="w-4 h-4 mr-2" /> Créer le premier dossier
           </Button>
         </div>
@@ -607,7 +607,7 @@ export function Dashboard() {
                     <Button variant="outline" size="sm" onClick={() => exportSinglePDF(r)} className="text-emerald-600 dark:text-emerald-500 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 flex-1">
                       <FileText className="h-4 w-4 mr-2" /> PDF
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => router.push(`/records/edit?id=${r.id}`)} className="text-blue-600 dark:text-blue-500 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 flex-1">
+                    <Button variant="outline" size="sm" onClick={() => router.push(`/app/records/edit?id=${r.id}`)} className="text-blue-600 dark:text-blue-500 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 flex-1">
                       <Edit2 className="h-4 w-4 mr-2" /> Modif.
                     </Button>
                     <Button variant="outline" size="icon" onClick={() => setRecordToDelete(r)} className="text-red-500 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/50">
@@ -679,7 +679,7 @@ export function Dashboard() {
                           <Button variant="ghost" size="icon" onClick={() => exportSinglePDF(r)} className="text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 h-8 w-8" title="Exporter PDF">
                             <FileText className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => router.push(`/records/edit?id=${r.id}`)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 h-8 w-8" title="Modifier">
+                          <Button variant="ghost" size="icon" onClick={() => router.push(`/app/records/edit?id=${r.id}`)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 h-8 w-8" title="Modifier">
                             <Edit2 className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => setRecordToDelete(r)} className="text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 h-8 w-8" title="Supprimer">

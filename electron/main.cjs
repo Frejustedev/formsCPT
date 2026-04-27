@@ -144,9 +144,9 @@ function createWindow() {
   });
 
   if (isDev) {
-    mainWindow.loadURL('http://localhost:3000').catch((e) => console.error('Failed to load dev URL', e));
+    mainWindow.loadURL('http://localhost:3000/app').catch((e) => console.error('Failed to load dev URL', e));
   } else {
-    mainWindow.loadURL('app://./').catch((e) => console.error('Failed to load app://', e));
+    mainWindow.loadURL('app://./app/').catch((e) => console.error('Failed to load app://', e));
   }
 
   mainWindow.webContents.setWindowOpenHandler(({ url: target }) => {

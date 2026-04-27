@@ -28,7 +28,7 @@ export function EditRecordView() {
         if (cancelled) return;
         if (!fetched) {
           toast.error("Ce dossier n'existe pas");
-          router.push('/');
+          router.push('/app');
           return;
         }
         setRecord(fetched);
@@ -58,7 +58,7 @@ export function EditRecordView() {
       await db.updateRecord(recordId, data);
       toast.success('Dossier mis à jour avec succès');
       logAction(db, 'UPDATE_RECORD', `Dossier N° ${data.numeroDossier || recordId} mis à jour.`);
-      router.push('/');
+      router.push('/app');
     } catch (e) {
       console.error(e);
       toast.error('Erreur lors de la mise à jour du dossier');
@@ -92,7 +92,7 @@ export function EditRecordView() {
         <div>
           <button
             type="button"
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/app')}
             className="flex items-center gap-2 text-primary font-medium mb-1 hover:underline"
           >
             <ArrowLeft className="w-4 h-4" /> Retour aux dossiers
@@ -106,7 +106,7 @@ export function EditRecordView() {
         <RecordForm
           initialValues={record}
           onSubmit={handleSubmit}
-          onCancel={() => router.push('/')}
+          onCancel={() => router.push('/app')}
           isSubmitting={submitting}
         />
       )}

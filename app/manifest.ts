@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Registre Cancer Thyroïde',
     short_name: 'Registre CDT',
     description: 'Application sécurisée de suivi médical des cancers différenciés de la thyroïde.',
-    start_url: '/',
+    start_url: '/app/',
     display: 'standalone',
     background_color: '#ffffff',
     theme_color: '#3b82f6',
