@@ -1,50 +1,48 @@
-import type {Metadata} from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Geist } from 'next/font/google';
 import './globals.css';
-import { cn } from "@/lib/utils";
-import { ThemeProvider } from "@/components/ThemeProvider";
-import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
-import { Toaster } from "@/components/ui/sonner";
-import { FirebaseProvider } from "@/components/FirebaseProvider";
-import { AppShell } from "@/components/AppShell";
+import { cn } from '@/lib/utils';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
+import { Toaster } from '@/components/ui/sonner';
+import { FirebaseProvider } from '@/components/FirebaseProvider';
+import { AppShell } from '@/components/AppShell';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
-
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Registre Cancer Thyroïde',
-  description: 'Application de registre des cancers thyroïdiens',
-  manifest: '/manifest.json',
+  description: 'Application de registre des cancers différenciés de la thyroïde',
+  applicationName: 'Registre CDT',
+  appleWebApp: {
+    capable: true,
+    title: 'Registre CDT',
+    statusBarStyle: 'default',
+  },
+  formatDetection: { telephone: false },
 };
 
-export default function RootLayout({children}: {children: React.ReactNode}) {
+export const viewport: Viewport = {
+  themeColor: '#3b82f6',
+  width: 'device-width',
+  initialScale: 1,
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={cn(inter.className, "font-sans", geist.variable)} suppressHydrationWarning>
-      <head>
-        <meta name="application-name" content="FormCDT" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="FormCDT" />
-        <meta name="format-detection" content="telephone=no" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#3b82f6" />
-      </head>
+    <html lang="fr" className={cn(inter.className, 'font-sans', geist.variable)} suppressHydrationWarning>
       <body className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-screen" suppressHydrationWarning>
-        <FirebaseProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <AppShell>
-              {children}
-            </AppShell>
-            <PWAInstallPrompt />
-            <Toaster position="top-right" />
-          </ThemeProvider>
-        </FirebaseProvider>
+        <ErrorBoundary>
+          <FirebaseProvider>
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+              <AppShell>{children}</AppShell>
+              <PWAInstallPrompt />
+              <Toaster position="top-right" />
+            </ThemeProvider>
+          </FirebaseProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

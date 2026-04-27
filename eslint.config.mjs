@@ -1,18 +1,17 @@
-import { defineConfig } from "eslint/config";
-import next from "eslint-config-next";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import firebaseRulesPlugin from "@firebase/eslint-plugin-security-rules";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { defineConfig } from 'eslint/config';
+import next from 'eslint-config-next';
+import firebaseRulesPlugin from '@firebase/eslint-plugin-security-rules';
 
 export default defineConfig([
   {
-    ignores: ["dist/**/*", ".next/**/*"]
+    ignores: ['dist/**/*', '.next/**/*', 'node_modules/**/*', 'public/sw.js', 'coverage/**/*'],
   },
   {
     extends: [...next],
+    rules: {
+      'react/no-unescaped-entities': 'off',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+    },
   },
-  firebaseRulesPlugin.configs["flat/recommended"]
+  firebaseRulesPlugin.configs['flat/recommended'],
 ]);

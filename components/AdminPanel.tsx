@@ -1,124 +1,217 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { collection, query, getDocs, doc, setDoc, deleteDoc, orderBy } from 'firebase/firestore';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  collection,
+  query,
+  getDocs,
+  doc,
+  setDoc,
+  deleteDoc,
+  orderBy,
+  limit as fsLimit,
+} from 'firebase/firestore';
 import { db, useFirebase, logAction } from './FirebaseProvider';
 import { Button } from './ui/button';
-import { ArrowLeft, UserCog, Shield, Activity, Trash2, Key, Database } from 'lucide-react';
+import {
+  ArrowLeft,
+  UserCog,
+  Shield,
+  Activity,
+  Key,
+  Database,
+  Search,
+} from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
+import { Input } from './ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { migrateStoredRecord } from '@/lib/migrate';
+import type { StoredMedicalRecord } from '@/lib/schemas';
+import { RECORD_FIELD_LABELS } from '@/lib/schemas';
+
+const SUPER_ADMIN_EMAIL = (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL || 'agbotonfrejuste@gmail.com').toLowerCase();
+const LOGS_PAGE_SIZE = 200;
+
+type AppUser = {
+  id: string;
+  email: string;
+  displayName?: string;
+  isUserAdmin: boolean;
+};
+
+type LogEntry = {
+  id: string;
+  action: string;
+  userId: string;
+  userEmail: string;
+  details?: string;
+  timestamp: number;
+};
+
+type AdminToggleState = {
+  user: AppUser;
+  makeAdmin: boolean;
+};
 
 export function AdminPanel({ onClose }: { onClose: () => void }) {
-  const { user, isAdmin } = useFirebase();
+  const { isAdmin } = useFirebase();
   const [activeTab, setActiveTab] = useState<'users' | 'logs'>('users');
-  const [users, setUsers] = useState<any[]>([]);
-  const [logs, setLogs] = useState<any[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [logSearch, setLogSearch] = useState('');
+  const [pendingToggle, setPendingToggle] = useState<AdminToggleState | null>(null);
 
   const fetchData = useCallback(async () => {
-    Promise.resolve().then(() => setLoading(true));
+    setLoading(true);
     try {
       if (activeTab === 'users') {
-        // Fetch users
-        const uSnap = await getDocs(collection(db, 'users'));
-        const uData = uSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-        // Also fetch admins to know who is admin
-        const aSnap = await getDocs(collection(db, 'admins'));
-        const aIds = new Set(aSnap.docs.map(d => d.id));
-        
-        setUsers(uData.map(u => ({ ...u, isUserAdmin: aIds.has(u.id) || u.email === 'agbotonfrejuste@gmail.com' })));
+        const [uSnap, aSnap] = await Promise.all([
+          getDocs(collection(db, 'users')),
+          getDocs(collection(db, 'admins')),
+        ]);
+        const adminIds = new Set(aSnap.docs.map((d) => d.id));
+        const list: AppUser[] = uSnap.docs.map((d) => {
+          const data = d.data() as Record<string, unknown>;
+          const email = String(data.email ?? '');
+          return {
+            id: d.id,
+            email,
+            displayName: typeof data.displayName === 'string' ? data.displayName : undefined,
+            isUserAdmin: adminIds.has(d.id) || email.toLowerCase() === SUPER_ADMIN_EMAIL,
+          };
+        });
+        setUsers(list);
       } else {
-        const lSnap = await getDocs(query(collection(db, 'logs'), orderBy('timestamp', 'desc')));
-        setLogs(lSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const lSnap = await getDocs(query(collection(db, 'logs'), orderBy('timestamp', 'desc'), fsLimit(LOGS_PAGE_SIZE)));
+        const list: LogEntry[] = lSnap.docs.map((d) => {
+          const data = d.data() as Record<string, unknown>;
+          return {
+            id: d.id,
+            action: String(data.action ?? ''),
+            userId: String(data.userId ?? ''),
+            userEmail: String(data.userEmail ?? ''),
+            details: typeof data.details === 'string' ? data.details : '',
+            timestamp: Number(data.timestamp ?? 0),
+          };
+        });
+        setLogs(list);
       }
     } catch (e) {
       console.error(e);
       toast.error('Erreur de chargement');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [activeTab]);
 
   useEffect(() => {
-    if (isAdmin) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      fetchData();
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (isAdmin) fetchData();
   }, [isAdmin, fetchData]);
 
-  const toggleAdmin = useCallback(async (targetUserId: string, targetEmail: string, currentStatus: boolean) => {
-    if (targetEmail === 'agbotonfrejuste@gmail.com') {
-      toast.error('Impossible de modifier le super administrateur');
+  const confirmToggleAdmin = async () => {
+    if (!pendingToggle) return;
+    const { user: target, makeAdmin } = pendingToggle;
+    setPendingToggle(null);
+    if (target.email.toLowerCase() === SUPER_ADMIN_EMAIL) {
+      toast.error('Le super-administrateur ne peut pas être modifié');
       return;
     }
     try {
-      if (currentStatus) {
-        await deleteDoc(doc(db, 'admins', targetUserId));
-        toast.success(`Droits admin retirés pour ${targetEmail}`);
-      } else {
-        const timestamp = Date.now();
-        await setDoc(doc(db, 'admins', targetUserId), {
-          email: targetEmail,
-          createdAt: timestamp
+      if (makeAdmin) {
+        await setDoc(doc(db, 'admins', target.id), {
+          email: target.email,
+          createdAt: Date.now(),
         });
-        toast.success(`${targetEmail} est maintenant administrateur`);
+        toast.success(`${target.email} est maintenant administrateur`);
+        logAction('GRANT_ADMIN', `Droits admin accordés à ${target.email}`);
+      } else {
+        await deleteDoc(doc(db, 'admins', target.id));
+        toast.success(`Droits admin retirés pour ${target.email}`);
+        logAction('REVOKE_ADMIN', `Droits admin retirés à ${target.email}`);
       }
       fetchData();
     } catch (e) {
       console.error(e);
       toast.error('Erreur lors de la modification des droits');
     }
-  }, [fetchData]);
+  };
 
   const handleExportGlobal = async () => {
     if (!isAdmin) return;
     setIsExporting(true);
     try {
       const snap = await getDocs(collection(db, 'records'));
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      
-      const ws = XLSX.utils.json_to_sheet(data.map((r: any) => ({
-        "ID": r.id,
-        "Date Ajout": new Date(r.createdAt).toLocaleDateString('fr-FR'),
-        "Dernière Modif": new Date(r.updatedAt).toLocaleDateString('fr-FR'),
-        "Auteur ID": r.userId,
-        "N° Dossier": r.numeroDossier,
-        "Nom": r.nom,
-        "Prénoms": r.prenoms,
-        "Sexe": r.sexe,
-        "Profession": r.profession,
-        "Année d'Incidence": r.anneeIncidence > 0 ? r.anneeIncidence : '',
-        "Âge au Diagnostic": r.ageDgc > 0 ? r.ageDgc : '',
-        "Facteurs de Risque": r.fdr,
-        "Type de Découverte": r.circonstanceDecouverte,
-        "Thyroïdectomie": r.chirT,
-        "Curage": r.chirC,
-        "Histologie (CDT)": r.cdt,
-        "Variante": r.variante,
-        "T": r.t,
-        "N": r.n,
-        "M": r.m,
-        "Stade": r.stade,
-        "Risque (ATA)": r.ata,
-        "Besoin I-131": r.besoinI131 ? "Oui" : "Non",
-        "Statut I-131": r.statutI131,
-        "Nombre de Cures": r.nbreCures > 0 ? r.nbreCures : 0,
-        "Activité Cumulée (mCi)": r.actCum > 0 ? r.actCum : 0,
-        "Durée de Suivi (mois)": r.suivi > 0 ? r.suivi : 0,
-        "Réponse 2 ans": r.rep2ans,
-        "Réponse 5 ans": r.rep5ans,
-        "Réponse 10 ans": r.rep10ans,
-        "Statut Vital": r.dcd ? "Décédé" : "Vivant",
-        "Âge au Décès": r.dcdAge > 0 ? r.dcdAge : ''
-      })));
-      
+      const data: StoredMedicalRecord[] = snap.docs.map((d) =>
+        migrateStoredRecord(d.id, d.data() as Record<string, unknown>),
+      );
+
+      const ws = XLSX.utils.json_to_sheet(
+        data.map((r) => ({
+          ID: r.id,
+          'Date Ajout': r.createdAt ? new Date(r.createdAt).toLocaleString('fr-FR') : '',
+          'Dernière Modif': r.updatedAt ? new Date(r.updatedAt).toLocaleString('fr-FR') : '',
+          'Auteur (userId)': r.userId,
+          [RECORD_FIELD_LABELS.numeroDossier]: r.numeroDossier,
+          [RECORD_FIELD_LABELS.nom]: r.nom,
+          [RECORD_FIELD_LABELS.prenoms]: r.prenoms,
+          [RECORD_FIELD_LABELS.sexe]: r.sexe,
+          [RECORD_FIELD_LABELS.ddn]: r.ddn,
+          [RECORD_FIELD_LABELS.wilaya]: r.wilaya,
+          [RECORD_FIELD_LABELS.atcdFamCdt]: r.atcdFamCdt,
+          [RECORD_FIELD_LABELS.atcdFamCancer]: r.atcdFamCancer,
+          [RECORD_FIELD_LABELS.atcdPersCancer]: r.atcdPersCancer,
+          [RECORD_FIELD_LABELS.ageDgc]: r.ageDgc || '',
+          [RECORD_FIELD_LABELS.cdt]: r.cdt,
+          [RECORD_FIELD_LABELS.variante]: r.variante,
+          [RECORD_FIELD_LABELS.taille]: r.taille,
+          [RECORD_FIELD_LABELS.ec]: r.ec,
+          [RECORD_FIELD_LABELS.macroMicro]: r.macroMicro,
+          [RECORD_FIELD_LABELS.ev]: r.ev,
+          [RECORD_FIELD_LABELS.evCount]: r.evCount,
+          [RECORD_FIELD_LABELS.mitoses]: r.mitoses,
+          [RECORD_FIELD_LABELS.hgie]: r.hgie,
+          [RECORD_FIELD_LABELS.nse]: r.nse,
+          [RECORD_FIELD_LABELS.filetNerv]: r.filetNerv,
+          [RECORD_FIELD_LABELS.r]: r.r,
+          [RECORD_FIELD_LABELS.t]: r.t,
+          [RECORD_FIELD_LABELS.n]: r.n,
+          [RECORD_FIELD_LABELS.m]: r.m,
+          [RECORD_FIELD_LABELS.chir]: r.chir,
+          [RECORD_FIELD_LABELS.cg]: r.cg,
+          [RECORD_FIELD_LABELS.tps]: r.tps,
+          [RECORD_FIELD_LABELS.dgcI1]: r.dgcI1 || '',
+          [RECORD_FIELD_LABELS.chirI1]: r.chirI1 || '',
+          [RECORD_FIELD_LABELS.nbreCures]: r.nbreCures || '',
+          [RECORD_FIELD_LABELS.actCum]: r.actCum || '',
+          [RECORD_FIELD_LABELS.suivi]: r.suivi || '',
+          [RECORD_FIELD_LABELS.rep2ans]: r.rep2ans,
+          [RECORD_FIELD_LABELS.rep5ans]: r.rep5ans,
+          [RECORD_FIELD_LABELS.rep10ans]: r.rep10ans,
+          [RECORD_FIELD_LABELS.dcd]: r.dcd,
+          [RECORD_FIELD_LABELS.dcdAge]: r.dcd === 'Oui' ? r.dcdAge || '' : '',
+        })),
+      );
+
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Tous_Dossiers");
+      XLSX.utils.book_append_sheet(wb, ws, 'Tous_Dossiers');
       XLSX.writeFile(wb, `Export_Global_Registre_${new Date().toISOString().split('T')[0]}.xlsx`);
-      
-      toast.success('Export global de la base de données réussi');
+
+      toast.success(`Export global de ${data.length} dossier(s) réussi`);
       logAction('EXPORT_GLOBAL', `${data.length} dossiers exportés`);
     } catch (e) {
       console.error(e);
@@ -127,6 +220,14 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
       setIsExporting(false);
     }
   };
+
+  const filteredLogs = useMemo(() => {
+    const term = logSearch.trim().toLowerCase();
+    if (!term) return logs;
+    return logs.filter((l) =>
+      [l.action, l.userEmail, l.details].some((v) => (v ?? '').toLowerCase().includes(term)),
+    );
+  }, [logs, logSearch]);
 
   if (!isAdmin) return null;
 
@@ -142,11 +243,11 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
               <Shield className="w-8 h-8 text-indigo-500" />
               Panneau d&apos;Administration
             </h1>
-            <p className="text-gray-500 dark:text-gray-400">Gérez les accès utilisateurs et exportez les données d&apos;étude.</p>
+            <p className="text-gray-500 dark:text-gray-400">Gérez les accès utilisateurs et exportez les données.</p>
           </div>
         </div>
-        <Button 
-          onClick={handleExportGlobal} 
+        <Button
+          onClick={handleExportGlobal}
           disabled={isExporting}
           className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 sm:self-center"
         >
@@ -161,11 +262,8 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
 
       <div className="flex gap-4 border-b border-gray-200 dark:border-gray-800 mb-6">
         <button
-          className={`pb-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'users'
-              ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
+          type="button"
+          className={`pb-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'users' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
           onClick={() => setActiveTab('users')}
         >
           <div className="flex items-center gap-2">
@@ -173,11 +271,8 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
           </div>
         </button>
         <button
-          className={`pb-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'logs'
-              ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
+          type="button"
+          className={`pb-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'logs' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
           onClick={() => setActiveTab('logs')}
         >
           <div className="flex items-center gap-2">
@@ -188,7 +283,7 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500" />
         </div>
       ) : activeTab === 'users' ? (
         <div className="bg-white dark:bg-gray-950 border rounded-2xl shadow-sm overflow-hidden">
@@ -202,36 +297,56 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map(u => (
-                <TableRow key={u.id}>
-                  <TableCell className="font-medium text-gray-900 dark:text-gray-100">{u.email}</TableCell>
-                  <TableCell>{u.displayName}</TableCell>
-                  <TableCell>
-                    {u.isUserAdmin ? (
-                      <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-200 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800">Admin</Badge>
-                    ) : (
-                      <Badge variant="outline">Utilisateur</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant={u.isUserAdmin ? "outline" : "default"}
-                      size="sm"
-                      className={!u.isUserAdmin ? "bg-indigo-600 hover:bg-indigo-700 text-white" : ""}
-                      onClick={() => toggleAdmin(u.id, u.email, u.isUserAdmin)}
-                      disabled={u.email === 'agbotonfrejuste@gmail.com'}
-                    >
-                      <Key className="w-4 h-4 mr-2" />
-                      {u.isUserAdmin ? 'Retirer droits' : 'Rendre Admin'}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {users.map((u) => {
+                const isSuper = u.email.toLowerCase() === SUPER_ADMIN_EMAIL;
+                return (
+                  <TableRow key={u.id}>
+                    <TableCell className="font-medium text-gray-900 dark:text-gray-100">{u.email}</TableCell>
+                    <TableCell>{u.displayName || '—'}</TableCell>
+                    <TableCell>
+                      {isSuper ? (
+                        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
+                          Super-admin
+                        </Badge>
+                      ) : u.isUserAdmin ? (
+                        <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-200 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800">
+                          Admin
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">Utilisateur</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant={u.isUserAdmin ? 'outline' : 'default'}
+                        size="sm"
+                        className={!u.isUserAdmin ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : ''}
+                        onClick={() => setPendingToggle({ user: u, makeAdmin: !u.isUserAdmin })}
+                        disabled={isSuper}
+                      >
+                        <Key className="w-4 h-4 mr-2" />
+                        {u.isUserAdmin ? 'Retirer droits' : 'Rendre Admin'}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-950 border rounded-2xl shadow-sm overflow-hidden">
+          <div className="p-3 border-b border-gray-100 dark:border-gray-800">
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Filtrer par action / email / détails..."
+                value={logSearch}
+                onChange={(e) => setLogSearch(e.target.value)}
+                className="pl-9 h-9"
+              />
+            </div>
+          </div>
           <Table>
             <TableHeader className="bg-gray-50 dark:bg-gray-900/50">
               <TableRow>
@@ -242,7 +357,7 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {logs.map(lg => (
+              {filteredLogs.map((lg) => (
                 <TableRow key={lg.id}>
                   <TableCell className="whitespace-nowrap tabular-nums text-sm">
                     {new Date(lg.timestamp).toLocaleString('fr-FR')}
@@ -251,20 +366,49 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
                   <TableCell>
                     <Badge variant="secondary" className="font-mono text-xs">{lg.action}</Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-500 dark:text-gray-400">
-                    {lg.details}
-                  </TableCell>
+                  <TableCell className="text-sm text-gray-500 dark:text-gray-400">{lg.details || '—'}</TableCell>
                 </TableRow>
               ))}
-              {logs.length === 0 && (
+              {filteredLogs.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-gray-500">Aucun journal d&apos;activité</TableCell>
+                  <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                    {logs.length === 0 ? "Aucun journal d'activité" : 'Aucune entrée ne correspond au filtre.'}
+                  </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
+          {logs.length === LOGS_PAGE_SIZE && (
+            <div className="p-3 text-xs text-gray-500 border-t border-gray-100 dark:border-gray-800">
+              Affichage des {LOGS_PAGE_SIZE} journaux les plus récents.
+            </div>
+          )}
         </div>
       )}
+
+      <AlertDialog open={!!pendingToggle} onOpenChange={(open) => !open && setPendingToggle(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingToggle?.makeAdmin ? 'Accorder des droits administrateur' : 'Retirer les droits administrateur'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingToggle?.makeAdmin
+                ? `${pendingToggle?.user.email} pourra voir et modifier tous les dossiers, gérer les autres utilisateurs et accéder à l'export global. Confirmer ?`
+                : `${pendingToggle?.user.email} ne pourra plus accéder qu'à ses propres dossiers. Confirmer ?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmToggleAdmin}
+              className={pendingToggle?.makeAdmin ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-red-600 hover:bg-red-700 text-white'}
+            >
+              Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

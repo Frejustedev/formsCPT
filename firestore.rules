@@ -14,8 +14,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function superAdminEmail() {
+      return 'agbotonfrejuste@gmail.com';
+    }
+
     function isAdmin() {
-      return isSignedIn() && (request.auth.token.email == 'agbotonfrejuste@gmail.com' || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+      return isSignedIn() && (
+        request.auth.token.email == superAdminEmail()
+        || request.auth.token.admin == true
+        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
     }
 
     function incoming() {
@@ -28,86 +36,98 @@ service cloud.firestore {
 
     function isValidAdmin(data) {
       return data.keys().hasAll(['email', 'createdAt'])
-        && data.email is string
+        && data.email is string && data.email.size() <= 320
         && data.createdAt is number;
     }
 
     match /admins/{adminId} {
       allow read: if isAdmin();
-      // Allow creation of admin by another admin
       allow create: if isAdmin() && isValidId(adminId) && isValidAdmin(incoming());
       allow delete: if isAdmin();
     }
 
     match /users/{userId} {
       allow read, list: if isAdmin();
-      // User can read their own profile, or create it
       allow read: if isSignedIn() && request.auth.uid == userId;
       allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid
         && incoming().keys().hasAll(['email', 'createdAt'])
-        && incoming().email is string
+        && incoming().email is string && incoming().email.size() <= 320
         && incoming().createdAt is number;
-      // Admin can't modify users, only see them to promote
+      allow update: if isSignedIn() && request.auth.uid == userId
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt;
     }
 
     match /logs/{logId} {
       allow read, list: if isAdmin();
-      allow create: if isSignedIn() 
-        && isValidId(logId) 
+      allow create: if isSignedIn()
+        && isValidId(logId)
         && incoming().keys().hasAll(['action', 'userId', 'userEmail', 'timestamp'])
-        && incoming().action is string
-        && incoming().userEmail is string
+        && incoming().action is string && incoming().action.size() <= 200
+        && incoming().userEmail is string && incoming().userEmail.size() <= 320
         && incoming().userId == request.auth.uid
         && incoming().timestamp is number;
     }
 
     match /drafts/{draftId} {
       allow read: if isSignedIn() && request.auth.uid == draftId;
-      allow write: if isSignedIn() 
+      allow write: if isSignedIn()
         && draftId == request.auth.uid
         && incoming().keys().hasAll(['userId', 'draftData', 'updatedAt'])
         && incoming().userId == request.auth.uid
-        && incoming().draftData is string
+        && incoming().draftData is string && incoming().draftData.size() <= 100000
         && incoming().updatedAt is number;
       allow delete: if isSignedIn() && draftId == request.auth.uid;
     }
 
+    function isString(data, key, maxSize) {
+      return data.get(key, '') is string && data.get(key, '').size() <= maxSize;
+    }
+
+    function isNum(data, key) {
+      return data.get(key, 0) is number;
+    }
+
     function isValidMedicalRecord(data) {
-      return data.keys().hasAll(['userId', 'createdAt', 'updatedAt'])
+      return data.keys().hasAll(['userId', 'createdAt', 'updatedAt', 'numeroDossier', 'nom', 'prenoms'])
         && data.userId is string && data.userId.size() <= 128
-        // User creates for themself, or admin testing
         && (data.userId == request.auth.uid || isAdmin())
         && data.createdAt is number
         && data.updatedAt is number
-        // Check string fields with sizes to avoid payload bloat
-        && data.get('numeroDossier', '') is string && data.get('numeroDossier', '').size() <= 200
-        && data.get('nom', '') is string && data.get('nom', '').size() <= 200
-        && data.get('prenoms', '') is string && data.get('prenoms', '').size() <= 200
-        && data.get('sexe', '') is string && data.get('sexe', '').size() <= 10
-        && data.get('ddn', '') is string && data.get('ddn', '').size() <= 100
-        && data.get('adresse', '') is string && data.get('adresse', '').size() <= 500
-        && data.get('atcdFamCdt', '') is string && data.get('atcdFamCancer', '') is string && data.get('atcdPersCancer', '') is string
-        && data.get('cdt', '') is string && data.get('variante', '') is string && data.get('sizeSup2cm', '') is string
-        && data.get('ec', '') is string && data.get('macroMicro', '') is string && data.get('ev', '') is string
-        && data.get('mitoses', '') is string && data.get('hgie', '') is string && data.get('nse', '') is string
-        && data.get('filetNerv', '') is string && data.get('r', '') is string && data.get('t', '') is string
-        && data.get('n', '') is string && data.get('m', '') is string && data.get('chir', '') is string
-        && data.get('cg', '') is string && data.get('tps', '') is string && data.get('rep2ans', '') is string
-        && data.get('rep5ans', '') is string && data.get('rep10ans', '') is string && data.get('dcd', '') is string
-        // Check number fields
-        && (data.get('ageDgc', 0) is number)
-        && (data.get('dgcI1', 0) is number)
-        && (data.get('chirI1', 0) is number)
-        && (data.get('nbreCures', 0) is number)
-        && (data.get('actCum', 0) is number)
-        && (data.get('suivi', 0) is number)
-        && (data.get('dcdAge', 0) is number);
+        && data.numeroDossier is string && data.numeroDossier.matches('^[A-Z0-9]{3}/[0-9]{2}$')
+        && data.nom is string && data.nom.size() > 0 && data.nom.size() <= 100
+        && data.prenoms is string && data.prenoms.size() > 0 && data.prenoms.size() <= 150
+        && isString(data, 'sexe', 20) && isString(data, 'ddn', 20) && isString(data, 'wilaya', 100)
+        && isString(data, 'atcdFamCdt', 20) && isString(data, 'atcdFamCancer', 20) && isString(data, 'atcdPersCancer', 20)
+        && isString(data, 'cdt', 20) && isString(data, 'variante', 50) && isString(data, 'taille', 10)
+        && isString(data, 'ec', 20) && isString(data, 'macroMicro', 30) && isString(data, 'ev', 20)
+        && isString(data, 'evCount', 10) && isString(data, 'mitoses', 20) && isString(data, 'hgie', 20)
+        && isString(data, 'nse', 20) && isString(data, 'filetNerv', 20)
+        && isString(data, 'r', 10) && isString(data, 't', 10) && isString(data, 'n', 10) && isString(data, 'm', 10)
+        && isString(data, 'chir', 10) && isString(data, 'cg', 20) && isString(data, 'tps', 5)
+        && isString(data, 'rep2ans', 20) && isString(data, 'rep5ans', 20) && isString(data, 'rep10ans', 20)
+        && isString(data, 'dcd', 20)
+        && isNum(data, 'ageDgc') && isNum(data, 'dgcI1') && isNum(data, 'chirI1')
+        && isNum(data, 'nbreCures') && isNum(data, 'actCum') && isNum(data, 'suivi')
+        && isNum(data, 'dcdAge');
+    }
+
+    function recordEditableKeys() {
+      return [
+        'updatedAt', 'numeroDossier', 'nom', 'prenoms', 'sexe', 'ddn', 'wilaya',
+        'atcdFamCdt', 'atcdFamCancer', 'atcdPersCancer', 'ageDgc',
+        'cdt', 'variante', 'taille', 'ec', 'macroMicro', 'ev', 'evCount',
+        'mitoses', 'hgie', 'nse', 'filetNerv',
+        'r', 't', 'n', 'm', 'chir', 'cg', 'tps',
+        'dgcI1', 'chirI1', 'nbreCures', 'actCum', 'suivi',
+        'rep2ans', 'rep5ans', 'rep10ans', 'dcd', 'dcdAge'
+      ];
     }
 
     match /records/{recordId} {
       allow read: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
       allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      
+
       allow create: if isSignedIn()
         && isValidId(recordId)
         && isValidMedicalRecord(incoming());
@@ -117,15 +137,22 @@ service cloud.firestore {
         && (existing().userId == request.auth.uid || isAdmin())
         && incoming().userId == existing().userId
         && incoming().createdAt == existing().createdAt
-        && incoming().diff(existing()).affectedKeys().hasOnly([
-            'updatedAt', 'numeroDossier', 'nom', 'prenoms', 'sexe', 'ddn', 'adresse',
-            'atcdFamCdt', 'atcdFamCancer', 'atcdPersCancer', 'ageDgc', 'cdt', 'variante',
-            'sizeSup2cm', 'ec', 'macroMicro', 'ev', 'mitoses', 'hgie', 'nse', 'filetNerv',
-            'r', 't', 'n', 'm', 'chir', 'cg', 'tps', 'dgcI1', 'chirI1', 'nbreCures',
-            'actCum', 'suivi', 'rep2ans', 'rep5ans', 'rep10ans', 'dcd', 'dcdAge'
-        ]);
+        && incoming().diff(existing()).affectedKeys().hasOnly(recordEditableKeys());
 
       allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+      match /versions/{versionId} {
+        allow read, list: if isSignedIn()
+          && (get(/databases/$(database)/documents/records/$(recordId)).data.userId == request.auth.uid || isAdmin());
+        allow create: if isSignedIn()
+          && isValidId(versionId)
+          && incoming().keys().hasAll(['recordId', 'snapshot', 'editedBy', 'createdAt'])
+          && incoming().recordId == recordId
+          && incoming().snapshot is string && incoming().snapshot.size() <= 100000
+          && incoming().editedBy == request.auth.uid
+          && incoming().createdAt is number;
+        allow update, delete: if false;
+      }
     }
   }
 }
