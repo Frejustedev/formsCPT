@@ -24,7 +24,7 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
       if (activeTab === 'users') {
         // Fetch users
         const uSnap = await getDocs(collection(db, 'users'));
-        const uData = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const uData = uSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
         // Also fetch admins to know who is admin
         const aSnap = await getDocs(collection(db, 'admins'));
         const aIds = new Set(aSnap.docs.map(d => d.id));
