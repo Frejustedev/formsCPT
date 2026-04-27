@@ -81,12 +81,27 @@
         "timestamp": { "type": "number" }
       },
       "required": ["action", "userId", "userEmail", "timestamp"]
+    },
+    "draft": {
+      "title": "Draft",
+      "description": "Medical record draft",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "draftData": { "type": "string" },
+        "updatedAt": { "type": "number"}
+      },
+      "required": ["userId", "draftData", "updatedAt"]
     }
   },
   "firestore": {
     "records/{recordId}": {
       "schema": { "$ref": "#/entities/medicalRecord" },
       "description": "Store all medical form submissions."
+    },
+    "drafts/{draftId}": {
+      "schema": { "$ref": "#/entities/draft" },
+      "description": "Store draft form data. draftId should be the userId."
     },
     "admins/{adminId}": {
       "schema": { "$ref": "#/entities/admin" },

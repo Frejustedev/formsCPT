@@ -26,6 +26,9 @@ export function Dashboard() {
   const [isAdminView, setIsAdminView] = useState(false);
   const [records, setRecords] = useState<(MedicalRecordFormValues & { id: string })[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterSexe, setFilterSexe] = useState('Tous');
+  const [filterVariante, setFilterVariante] = useState('Toutes');
+  const [filterAge, setFilterAge] = useState('Tous');
   const [currentPage, setCurrentPage] = useState(1);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<(MedicalRecordFormValues & { id: string }) | null>(null);
@@ -254,11 +257,28 @@ export function Dashboard() {
     setIsFormOpen(false);
   };
 
-  const filteredRecords = records.filter(r => 
-    r.nom.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    r.prenoms?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.numeroDossier?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredRecords = records.filter(r => {
+    const matchSearch = r.nom.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      r.prenoms?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.numeroDossier?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (!matchSearch) return false;
+
+    if (filterSexe !== 'Tous') {
+      if (r.sexe !== filterSexe) return false;
+    }
+
+    if (filterVariante !== 'Toutes') {
+      if (r.cdt !== filterVariante) return false;
+    }
+
+    if (filterAge !== 'Tous') {
+      if (filterAge === '< 40 ans' && !(r.ageDgc > 0 && r.ageDgc < 40)) return false;
+      if (filterAge === '≥ 40 ans' && !(r.ageDgc >= 40)) return false;
+    }
+
+    return true;
+  });
 
   const ITEMS_PER_PAGE = 20;
   const totalPages = Math.ceil(filteredRecords.length / ITEMS_PER_PAGE);
@@ -415,14 +435,56 @@ export function Dashboard() {
               <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{avgAge || '-'} ans</div>
             </div>
           </div>
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input 
-              placeholder="Rechercher par nom ou N° dossier..." 
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="pl-9 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 focus-visible:ring-primary h-10 w-full"
-            />
+          <div className="flex flex-col gap-4">
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input 
+                placeholder="Rechercher par nom ou N° dossier..." 
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-9 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 focus-visible:ring-primary h-10 w-full"
+              />
+            </div>
+            
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-sm font-medium text-gray-500 mr-2 flex items-center gap-1">Filtres:</span>
+              
+              <div className="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+                {['Tous', 'M', 'F'].map(s => (
+                  <button 
+                    key={s} 
+                    onClick={() => { setFilterSexe(s); setCurrentPage(1); }}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${filterSexe === s ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                  >
+                    {s === 'Tous' ? 'Tous genres' : s === 'M' ? 'Hommes' : 'Femmes'}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+                {['Tous', '< 40 ans', '≥ 40 ans'].map(a => (
+                  <button 
+                    key={a} 
+                    onClick={() => { setFilterAge(a); setCurrentPage(1); }}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${filterAge === a ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                  >
+                    {a === 'Tous' ? 'Tout âge' : a}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+                {['Toutes', 'Papillaire', 'Vésiculaire', 'Autre'].map(v => (
+                  <button 
+                    key={v} 
+                    onClick={() => { setFilterVariante(v); setCurrentPage(1); }}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${filterVariante === v ? 'bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                  >
+                    {v === 'Toutes' ? 'Toutes Histo.' : v}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -11,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, FileText, Activity, Stethoscope, UserIcon, CheckCircle2, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
-
-const DRAFT_KEY = 'medical_record_draft';
+import { useFirebase } from './FirebaseProvider';
+import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
+import { db } from './FirebaseProvider';
 
 interface RecordFormProps {
   initialValues?: Partial<MedicalRecordFormValues>;
@@ -22,80 +23,120 @@ interface RecordFormProps {
 }
 
 export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: RecordFormProps) {
+  const { user } = useFirebase();
   const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null);
-
-  const getInitialFormValues = (): Partial<MedicalRecordFormValues> => {
-    if (initialValues) return initialValues;
-    if (typeof window !== 'undefined') {
-      const draft = localStorage.getItem(DRAFT_KEY);
-      if (draft) {
-        try {
-          return JSON.parse(draft);
-        } catch (e) {
-          console.error("Impossible de lire le brouillon", e);
-        }
-      }
-    }
-    return {};
+  
+  const baseDefaults = {
+    numeroDossier: '',
+    nom: '',
+    prenoms: '',
+    sexe: 'NP',
+    ddn: '',
+    adresse: '',
+    atcdFamCdt: 'NP',
+    atcdFamCancer: 'NP',
+    atcdPersCancer: 'NP',
+    ageDgc: 0,
+    cdt: '',
+    variante: '',
+    sizeSup2cm: 'NP',
+    ec: 'NP',
+    macroMicro: 'NP',
+    ev: 'NP',
+    mitoses: 'NP',
+    hgie: 'NP',
+    nse: 'NP',
+    filetNerv: 'NP',
+    r: '',
+    t: '',
+    n: '',
+    m: '',
+    chir: 'NP',
+    cg: '',
+    tps: '',
+    dgcI1: 0,
+    chirI1: 0,
+    nbreCures: 0,
+    actCum: 0,
+    suivi: 0,
+    rep2ans: 'NP',
+    rep5ans: 'NP',
+    rep10ans: 'NP',
+    dcd: 'NP',
+    dcdAge: 0,
   };
 
-  const { register, control, handleSubmit, watch, reset, formState: { errors } } = useForm<MedicalRecordFormValues>({
+  const { register, control, handleSubmit, watch, reset, formState: { errors, isLoading } } = useForm<MedicalRecordFormValues>({
     resolver: zodResolver(medicalRecordSchema as any),
-    defaultValues: {
-      numeroDossier: '',
-      nom: '',
-      prenoms: '',
-      sexe: 'NP',
-      ddn: '',
-      adresse: '',
-      atcdFamCdt: 'NP',
-      atcdFamCancer: 'NP',
-      atcdPersCancer: 'NP',
-      ageDgc: 0,
-      cdt: '',
-      variante: '',
-      sizeSup2cm: 'NP',
-      ec: 'NP',
-      macroMicro: 'NP',
-      ev: 'NP',
-      mitoses: 'NP',
-      hgie: 'NP',
-      nse: 'NP',
-      filetNerv: 'NP',
-      r: '',
-      t: '',
-      n: '',
-      m: '',
-      chir: 'NP',
-      cg: '',
-      tps: '',
-      dgcI1: 0,
-      chirI1: 0,
-      nbreCures: 0,
-      actCum: 0,
-      suivi: 0,
-      rep2ans: 'NP',
-      rep5ans: 'NP',
-      rep10ans: 'NP',
-      dcd: 'NP',
-      dcdAge: 0,
-      ...getInitialFormValues(),
-    },
+    defaultValues: async () => {
+      let draftOrInitial = initialValues || {};
+      
+      if (!initialValues && user) {
+        try {
+          const draftDoc = await getDoc(doc(db, 'drafts', user.uid));
+          if (draftDoc.exists()) {
+             const data = JSON.parse(draftDoc.data().draftData);
+             setDraftSavedAt(new Date(draftDoc.data().updatedAt));
+             draftOrInitial = data;
+          } else {
+            // Fallback to localstorage just in case
+            const localDraft = localStorage.getItem('medical_record_draft');
+            if (localDraft) {
+               draftOrInitial = JSON.parse(localDraft);
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load cloud draft', e);
+        }
+      }
+      
+      return {
+        ...baseDefaults,
+        ...draftOrInitial
+      } as any;
+    }
   });
 
   useEffect(() => {
-    // only save draft if it's a new record creation (initialValues is empty or undefined)
-    if (!initialValues) {
+    // only save draft if it's a new record creation
+    if (!initialValues && user) {
+       
+      let timeoutId: any;
       const subscription = watch((value) => {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(value));
-        setDraftSavedAt(new Date());
+        // debounce save
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(async () => {
+          try {
+            const timestamp = Date.now();
+            await setDoc(doc(db, 'drafts', user.uid), {
+               userId: user.uid,
+               draftData: JSON.stringify(value),
+               updatedAt: timestamp
+            });
+            setDraftSavedAt(new Date(timestamp));
+            // also local storage backup
+            localStorage.setItem('medical_record_draft', JSON.stringify(value));
+          } catch(e) {
+             console.error('Failed to save draft', e);
+          }
+        }, 1500); // 1.5s debounce
       });
-      return () => subscription.unsubscribe();
+      return () => {
+        clearTimeout(timeoutId);
+        subscription.unsubscribe();
+      };
     }
-  }, [watch, initialValues]);
+  }, [watch, initialValues, user]);
 
-  const clearDraft = () => {
-    localStorage.removeItem(DRAFT_KEY);
+  const clearDraft = async () => {
+    if (user && !initialValues) {
+      try {
+        await deleteDoc(doc(db, 'drafts', user.uid));
+        localStorage.removeItem('medical_record_draft');
+      } catch(e) {
+        console.error('Failed to clear draft', e);
+      }
+    }
     setDraftSavedAt(null);
   };
 
@@ -195,6 +236,15 @@ export function RecordForm({ initialValues, onSubmit, onCancel, isSubmitting }: 
       />
     </div>
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-gray-400">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent mb-4"></div>
+        <p>Chargement du dossier...</p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmitCallback)} className="space-y-6 pb-20 relative">

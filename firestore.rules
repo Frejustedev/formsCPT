@@ -61,6 +61,17 @@ service cloud.firestore {
         && incoming().timestamp is number;
     }
 
+    match /drafts/{draftId} {
+      allow read: if isSignedIn() && request.auth.uid == draftId;
+      allow write: if isSignedIn() 
+        && draftId == request.auth.uid
+        && incoming().keys().hasAll(['userId', 'draftData', 'updatedAt'])
+        && incoming().userId == request.auth.uid
+        && incoming().draftData is string
+        && incoming().updatedAt is number;
+      allow delete: if isSignedIn() && draftId == request.auth.uid;
+    }
+
     function isValidMedicalRecord(data) {
       return data.keys().hasAll(['userId', 'createdAt', 'updatedAt'])
         && data.userId is string && data.userId.size() <= 128
