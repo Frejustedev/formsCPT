@@ -6,7 +6,6 @@ import { db, handleFirestoreError, OperationType, useFirebase } from './Firebase
 import { MedicalRecordFormValues } from '@/lib/schemas';
 import { Button, buttonVariants } from './ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { RecordForm } from './RecordForm';
 import { Download, FilePlus2, LogOut, Trash2, ArrowLeft, ActivitySquare, Edit2, FileText, FileSpreadsheet, ChevronDown, Users, PieChart, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
@@ -15,24 +14,20 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { ThemeToggle } from './ThemeToggle';
 import { toast } from 'sonner';
-import { Search, ShieldAlert } from 'lucide-react';
-import { AdminPanel } from './AdminPanel';
+import { Search } from 'lucide-react';
 import { logAction } from './FirebaseProvider';
+import { useRouter } from 'next/navigation';
 
 export function Dashboard() {
-  const { user, isAdmin, logOut } = useFirebase();
-  const [isAdminView, setIsAdminView] = useState(false);
+  const { user, isAdmin } = useFirebase();
+  const router = useRouter();
   const [records, setRecords] = useState<(MedicalRecordFormValues & { id: string })[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSexe, setFilterSexe] = useState('Tous');
   const [filterVariante, setFilterVariante] = useState('Toutes');
   const [filterAge, setFilterAge] = useState('Tous');
   const [currentPage, setCurrentPage] = useState(1);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<(MedicalRecordFormValues & { id: string }) | null>(null);
-
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
 
   const handleSearch = (term: string) => {
@@ -40,7 +35,6 @@ export function Dashboard() {
     setCurrentPage(1);
   };
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
 
   const fetchRecords = useCallback(async () => {
     try {
@@ -64,6 +58,21 @@ export function Dashboard() {
       fetchRecords();
     }
   }, [user, isAdmin, fetchRecords]);
+
+  const handleDelete = async () => {
+    if (!recordToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'records', recordToDelete));
+      toast.success('Dossier supprimé');
+      logAction('DELETE_RECORD', `Dossier supprimé (ID: ${recordToDelete})`);
+      fetchRecords();
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `records/${recordToDelete}`);
+      toast.error('Erreur lors de la suppression');
+    } finally {
+      setRecordToDelete(null);
+    }
+  };
 
   const handleExport = () => {
     const ws = XLSX.utils.json_to_sheet(records.map(r => ({
@@ -200,61 +209,8 @@ export function Dashboard() {
     doc.save(fileName);
   };
 
-  const handleSubmit = async (data: MedicalRecordFormValues) => {
-    try {
-      setSubmitting(true);
-      const payload: any = { ...data };
-      delete payload.id;
-      
-      if (editingRecord) {
-        payload.updatedAt = Date.now();
-        await updateDoc(doc(db, 'records', editingRecord.id), payload);
-        toast.success('Dossier mis à jour avec succès');
-        logAction('UPDATE_RECORD', `Dossier N° ${payload.numeroDossier || editingRecord.id} mis à jour.`);
-      } else {
-        const newId = crypto.randomUUID();
-        payload.userId = user?.uid;
-        payload.createdAt = Date.now();
-        payload.updatedAt = Date.now();
-        await setDoc(doc(db, 'records', newId), payload);
-        toast.success('Nouveau dossier créé avec succès');
-        logAction('CREATE_RECORD', `Dossier N° ${payload.numeroDossier || newId} créé.`);
-      }
-      
-      setIsFormOpen(false);
-      setEditingRecord(null);
-      fetchRecords();
-    } catch (e) {
-      handleFirestoreError(e, editingRecord ? OperationType.UPDATE : OperationType.CREATE, 'records');
-      toast.error('Erreur lors de la sauvegarde du dossier');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!recordToDelete) return;
-    try {
-      await deleteDoc(doc(db, 'records', recordToDelete));
-      toast.success('Dossier supprimé');
-      logAction('DELETE_RECORD', `Dossier supprimé (ID: ${recordToDelete})`);
-      fetchRecords();
-    } catch (e) {
-      handleFirestoreError(e, OperationType.DELETE, `records/${recordToDelete}`);
-      toast.error('Erreur lors de la suppression');
-    } finally {
-      setRecordToDelete(null);
-    }
-  };
-
   const openFormForEdit = (record: MedicalRecordFormValues & { id: string }) => {
-    setEditingRecord(record);
-    setIsFormOpen(true);
-  };
-
-  const closeForm = () => {
-    setEditingRecord(null);
-    setIsFormOpen(false);
+    router.push(`/records/${record.id}`);
   };
 
   const filteredRecords = records.filter(r => {
@@ -340,28 +296,6 @@ export function Dashboard() {
     );
   };
 
-  if (isAdminView) {
-    return <AdminPanel onClose={() => setIsAdminView(false)} />;
-  }
-
-  if (isFormOpen) {
-    return (
-      <div className="flex-1 max-w-5xl mx-auto p-4 sm:p-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-2 text-primary font-medium mb-1 cursor-pointer hover:underline" onClick={closeForm}>
-              <ArrowLeft className="w-4 h-4" /> Retour aux dossiers
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-              {editingRecord ? 'Modifier le Dossier' : 'Nouveau Dossier Médical'}
-            </h1>
-          </div>
-        </div>
-        <RecordForm initialValues={editingRecord || undefined} onSubmit={handleSubmit} onCancel={closeForm} isSubmitting={submitting} />
-      </div>
-    );
-  }
-
   return (
     <div className="flex-1 max-w-7xl mx-auto p-4 sm:p-6 w-full space-y-8 animate-in fade-in duration-500">
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-2">
@@ -370,30 +304,11 @@ export function Dashboard() {
             <ActivitySquare className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Dossier CDT</h1>
-            <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">Gérez et exportez vos données médicales thyroïdiennes.</p>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Tableau de bord</h1>
+            <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">Gérez et listez vos données médicales thyroïdiennes.</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
-          {user && (
-            <div className="text-sm text-gray-600 dark:text-gray-300 hidden md:flex items-center gap-2 mr-2">
-              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-blue-700 dark:text-blue-300 font-bold">
-                {user.displayName?.charAt(0) || user.email?.charAt(0) || 'U'}
-              </div>
-              <span>
-                Dr. <span className="font-semibold">{user.displayName || user.email?.split('@')[0]}</span>
-              </span>
-            </div>
-          )}
-          {isAdmin && (
-            <Button variant="outline" className="gap-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-900/40" onClick={() => setIsAdminView(true)}>
-              <ShieldAlert className="w-4 h-4" /> Admin
-            </Button>
-          )}
-          <ThemeToggle />
-          <Button variant="ghost" onClick={logOut} className="gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-gray-50">
-            <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Déconnexion</span>
-          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger className={buttonVariants({ variant: "outline", className: "gap-2 flex-1 sm:flex-none border-gray-200 dark:border-gray-800 shadow-sm focus-visible:ring-1 cursor-pointer" })}>
               <Download className="h-4 w-4" /> Exporter <ChevronDown className="h-4 w-4 ml-1 opacity-50" />
@@ -409,7 +324,7 @@ export function Dashboard() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button onClick={() => setIsFormOpen(true)} className="gap-2 flex-1 sm:flex-none shadow-sm shadow-primary/20">
+          <Button onClick={() => router.push('/records/new')} className="gap-2 flex-1 sm:flex-none shadow-sm shadow-primary/20">
             <FilePlus2 className="h-4 w-4" /> Nouveau Dossier
           </Button>
         </div>
@@ -503,7 +418,7 @@ export function Dashboard() {
           </div>
           <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Aucun dossier médical</h3>
           <p className="mt-2 text-gray-500 dark:text-gray-400 max-w-sm mx-auto">Vous n&apos;avez pas encore créé de dossier. Ajoutez votre premier patient pour commencer le suivi.</p>
-          <Button className="mt-8 shadow-sm shadow-primary/20" onClick={() => setIsFormOpen(true)}>
+          <Button className="mt-8 shadow-sm shadow-primary/20" onClick={() => router.push('/records/new')}>
             <FilePlus2 className="w-4 h-4 mr-2"/>
             Créer le premier dossier
           </Button>

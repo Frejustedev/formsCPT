@@ -5,14 +5,17 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { Toaster } from "@/components/ui/sonner";
+import { FirebaseProvider } from "@/components/FirebaseProvider";
+import { AppShell } from "@/components/AppShell";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Dossier CDT',
-  description: 'Formulaire médical pour le suivi du cancer de la thyroïde',
+  title: 'Registre Cancer Thyroïde',
+  description: 'Application de registre des cancers thyroïdiens',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
@@ -28,16 +31,20 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
         <meta name="theme-color" content="#3b82f6" />
       </head>
       <body className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-screen" suppressHydrationWarning>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-          <PWAInstallPrompt />
-          <Toaster position="top-right" />
-        </ThemeProvider>
+        <FirebaseProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <AppShell>
+              {children}
+            </AppShell>
+            <PWAInstallPrompt />
+            <Toaster position="top-right" />
+          </ThemeProvider>
+        </FirebaseProvider>
       </body>
     </html>
   );
