@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'FORMULAIRE CDT',
-    short_name: 'FormCDT',
+    name: 'Dossier CDT',
+    short_name: 'Dossier CDT',
     description: 'Formulaire médical pour le suivi du cancer de la thyroïde',
     start_url: '/',
     display: 'standalone',

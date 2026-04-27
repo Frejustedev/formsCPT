@@ -4,13 +4,14 @@ import './globals.css';
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { Toaster } from "@/components/ui/sonner";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'FORMULAIRE CDT',
+  title: 'Dossier CDT',
   description: 'Formulaire médical pour le suivi du cancer de la thyroïde',
 };
 
@@ -35,6 +36,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
         >
           {children}
           <PWAInstallPrompt />
+          <Toaster position="top-right" />
         </ThemeProvider>
       </body>
     </html>

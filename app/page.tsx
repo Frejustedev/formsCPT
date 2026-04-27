@@ -24,7 +24,7 @@ function AppContent() {
             <Stethoscope className="w-10 h-10" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">FORMULAIRE CDT</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Dossier CDT</h1>
             <p className="text-gray-500 dark:text-gray-400 leading-relaxed text-sm px-2">
               Une plateforme moderne et sécurisée pour gérer, structurer et exporter vos dossiers de suivi médical en toute simplicité.
             </p>

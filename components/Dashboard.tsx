@@ -10,16 +10,22 @@ import { RecordForm } from './RecordForm';
 import { Download, FilePlus2, LogOut, Trash2, ArrowLeft, ActivitySquare, Edit2, FileText, FileSpreadsheet, ChevronDown } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { Input } from './ui/input';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { ThemeToggle } from './ThemeToggle';
+import { toast } from 'sonner';
+import { Search } from 'lucide-react';
 
 export function Dashboard() {
   const { user, logOut } = useFirebase();
   const [records, setRecords] = useState<(MedicalRecordFormValues & { id: string })[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<(MedicalRecordFormValues & { id: string }) | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -188,12 +194,14 @@ export function Dashboard() {
       if (editingRecord) {
         payload.updatedAt = Date.now();
         await updateDoc(doc(db, 'records', editingRecord.id), payload);
+        toast.success('Dossier mis à jour avec succès');
       } else {
         const newId = crypto.randomUUID();
         payload.userId = user?.uid;
         payload.createdAt = Date.now();
         payload.updatedAt = Date.now();
         await setDoc(doc(db, 'records', newId), payload);
+        toast.success('Nouveau dossier créé avec succès');
       }
       
       setIsFormOpen(false);
@@ -201,19 +209,23 @@ export function Dashboard() {
       fetchRecords();
     } catch (e) {
       handleFirestoreError(e, editingRecord ? OperationType.UPDATE : OperationType.CREATE, 'records');
-      alert('Erreur lors de la sauvegarde');
+      toast.error('Erreur lors de la sauvegarde du dossier');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Voulez-vous vraiment supprimer ce dossier ?')) return;
+  const handleDelete = async () => {
+    if (!recordToDelete) return;
     try {
-      await deleteDoc(doc(db, 'records', id));
+      await deleteDoc(doc(db, 'records', recordToDelete));
+      toast.success('Dossier supprimé');
       fetchRecords();
     } catch (e) {
-      handleFirestoreError(e, OperationType.DELETE, `records/${id}`);
+      handleFirestoreError(e, OperationType.DELETE, `records/${recordToDelete}`);
+      toast.error('Erreur lors de la suppression');
+    } finally {
+      setRecordToDelete(null);
     }
   };
 
@@ -227,6 +239,12 @@ export function Dashboard() {
     setIsFormOpen(false);
   };
 
+  const filteredRecords = records.filter(r => 
+    r.nom.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    r.prenoms?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.numeroDossier?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (isFormOpen) {
     return (
       <div className="flex-1 max-w-5xl mx-auto p-4 sm:p-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -235,7 +253,7 @@ export function Dashboard() {
             <div className="flex items-center gap-2 text-primary font-medium mb-1 cursor-pointer hover:underline" onClick={closeForm}>
               <ArrowLeft className="w-4 h-4" /> Retour aux dossiers
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
               {editingRecord ? 'Modifier le Dossier' : 'Nouveau Dossier Médical'}
             </h1>
           </div>
@@ -253,17 +271,27 @@ export function Dashboard() {
             <ActivitySquare className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">FORMULAIRE CDT</h1>
-            <p className="text-sm text-gray-500 mt-1">Gérez et exportez vos données médicales thyroïdiennes.</p>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Dossier CDT</h1>
+            <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">Gérez et exportez vos données médicales thyroïdiennes.</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+          {user && (
+            <div className="text-sm text-gray-600 dark:text-gray-300 hidden md:flex items-center gap-2 mr-2">
+              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-blue-700 dark:text-blue-300 font-bold">
+                {user.displayName?.charAt(0) || user.email?.charAt(0) || 'U'}
+              </div>
+              <span>
+                Dr. <span className="font-semibold">{user.displayName || user.email?.split('@')[0]}</span>
+              </span>
+            </div>
+          )}
           <ThemeToggle />
           <Button variant="ghost" onClick={logOut} className="gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-gray-50">
             <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Déconnexion</span>
           </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger className={buttonVariants({ variant: "outline", className: "gap-2 flex-1 sm:flex-none border-gray-200 shadow-sm focus-visible:ring-1 cursor-pointer" })}>
+            <DropdownMenuTrigger className={buttonVariants({ variant: "outline", className: "gap-2 flex-1 sm:flex-none border-gray-200 dark:border-gray-800 shadow-sm focus-visible:ring-1 cursor-pointer" })}>
               <Download className="h-4 w-4" /> Exporter <ChevronDown className="h-4 w-4 ml-1 opacity-50" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -282,6 +310,18 @@ export function Dashboard() {
           </Button>
         </div>
       </header>
+
+      {records.length > 0 && (
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input 
+            placeholder="Rechercher par nom ou N° dossier..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 focus-visible:ring-primary h-10 w-full"
+          />
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center items-center h-64 border rounded-2xl bg-white dark:bg-gray-950 shadow-sm">
@@ -316,9 +356,16 @@ export function Dashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {records.map((r) => (
-                <TableRow key={r.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors">
-                  <TableCell className="font-medium text-gray-900 dark:text-gray-100 border-l-2 border-transparent group-hover:border-primary">
+              {filteredRecords.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center text-gray-500 dark:text-gray-400">
+                    Aucun dossier ne correspond à votre recherche.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredRecords.map((r) => (
+                  <TableRow key={r.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors">
+                    <TableCell className="font-medium text-gray-900 dark:text-gray-100 border-l-2 border-transparent group-hover:border-primary">
                     {r.numeroDossier || <span className="text-gray-300 dark:text-gray-600 italic">Non défini</span>}
                   </TableCell>
                   <TableCell>
@@ -351,17 +398,32 @@ export function Dashboard() {
                       <Button variant="ghost" size="icon" onClick={() => openFormForEdit(r)} className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 h-8 w-8" title="Modifier">
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 h-8 w-8" title="Supprimer">
+                      <Button variant="ghost" size="icon" onClick={() => setRecordToDelete(r.id)} className="text-red-400 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 h-8 w-8" title="Supprimer">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              )))}
             </TableBody>
           </Table>
         </div>
       )}
+
+      <AlertDialog open={!!recordToDelete} onOpenChange={(open) => !open && setRecordToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer le dossier</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer ce dossier ? Cette action est irréversible et toutes les données associées seront perdues.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white">Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
